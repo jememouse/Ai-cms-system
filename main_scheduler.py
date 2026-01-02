@@ -33,14 +33,14 @@ def run_once():
 
 def main():
     print("=========================================")
-    print("   Box Artist DeepSeek Automation Scheduler")
-    print("   [每天 02:00, 04:00, 06:00, 07:00 自动执行]")
+    print("   盒艺家 SEO 自动化调度器")
+    print("   [每天 01:00, 03:00, 05:00, 07:00 自动执行]")
     print("=========================================")
     
-    # 定义定时任务
-    schedule.every().day.at("02:00").do(job)
-    schedule.every().day.at("04:00").do(job)
-    schedule.every().day.at("06:00").do(job)
+    # 定义定时任务 (北京时间)
+    schedule.every().day.at("01:00").do(job)
+    schedule.every().day.at("03:00").do(job)
+    schedule.every().day.at("05:00").do(job)
     schedule.every().day.at("07:00").do(job)
     
     # 也可以每小时运行一次
