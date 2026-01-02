@@ -1,5 +1,25 @@
 {
-  "project_name": "盒艺家 (Box Artist) - AI Edition",
+  "project_name": "盒艺家 (Box Artist) - AI SEO Edition",
+  "brand": {
+    "name": "盒艺家",
+    "english_name": "heyijiapack",
+    "website": "https://heyijiapack.com/",
+    "tagline": "让每个好产品都有好包装",
+    "positioning": "全品类包装在线定制电商",
+    "intro": "3秒智能报价 · 1个起订 · 最快1天交付"
+  },
+  "selling_points": [
+    "3秒智能报价",
+    "1个起订",
+    "最快1天交付",
+    "AI智能设计",
+    "RGB色彩空间支持",
+    "ISO12647 CMYK色彩标准",
+    "全球顶级设备",
+    "20年工艺沉淀",
+    "全链路数字化方案",
+    "色彩精准，品质如一"
+  ],
   "mining_seeds": [
     "包装定制",
     "小批量定制",
@@ -42,18 +62,15 @@
       "纸箱",
       "礼盒",
       "茶叶包装",
-      "烘焙包装"
-    ],
-    "selling_points": [
-      "1个起订",
-      "1天交货",
-      "源头厂",
-      "高阻隔",
-      "全降解",
-      "免费设计",
-      "极速打样"
+      "烘焙包装",
+      "手提袋",
+      "化妆品盒"
     ],
     "tech_terms": [
+      "数码印刷",
+      "RGB色彩空间",
+      "CMYK色彩标准",
+      "ISO12647",
       "变色技术",
       "防伪技术",
       "智能温控",

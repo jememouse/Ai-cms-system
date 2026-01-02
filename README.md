@@ -17,10 +17,11 @@
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (本地开发推荐)
 
 ### 2. 配置环境变量
 
-复制 `.env.example` (如果不存在则创建一个) 为 `.env` 并填入必要的 API Key:
+复制 `.env.example` 为 `.env` 并填入必要的 API Key:
 
 ```bash
 cp .env.example .env
@@ -32,7 +33,19 @@ cp .env.example .env
 
 ### 3. 启动服务
 
-在项目根目录下运行:
+#### 方式 A: 使用 uv (本地开发推荐)
+
+`uv` 是一个极速的 Python 包管理器，自动处理虚拟环境。
+
+```bash
+# 同步依赖
+uv sync
+
+# 运行主程序
+uv run main_scheduler.py
+```
+
+#### 方式 B: 使用 Docker (生产部署推荐)
 
 ```bash
 docker-compose up -d --build
