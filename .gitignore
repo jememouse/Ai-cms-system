@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Environment Variables
+.env
+
+# System
+.DS_Store
+
+# Project Data
+trends_data.json
+generated_seo_data.json
+n8n_data/

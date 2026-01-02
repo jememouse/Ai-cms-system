@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  trends-fetcher:
+    build: .
+    container_name: deepseek-feisu-worker
+    restart: always
+    # 挂载 .env 文件，确保 API Key 安全
+    env_file:
+      - .env
+    volumes:
+      # 挂载数据文件，保证重启后数据不丢，且能在宿主机查看
+      - ./trends_data.json:/app/trends_data.json
+      - ./generated_seo_data.json:/app/generated_seo_data.json
+      # 如果需要持久化日志，可以挂载日志目录 (可选)
+      # - ./logs:/app/logs
+    environment:
+      - TZ=Asia/Shanghai
+      - RUN_ON_STARTUP=true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
