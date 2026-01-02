@@ -1,15 +1,20 @@
 # feishu_uploader.py
 import requests
+
 import json
 import time
 import os
+from dotenv import load_dotenv
+
+# 加载 .env 环境变量
+load_dotenv()
 
 # ================= 配置区域 =================
-# 复用 legacy 项目中的配置 (如有变更请在此处修改)
-APP_ID = "cli_a9d821dd2cb89bcb"
-APP_SECRET = "lCRZc6MbLMZwQ55mEXYivhxL2Ey7uJzb"
-APP_TOKEN = "ROVGbzfTfaEGjosDkxHck65Cnmx" # Base Token
-TABLE_ID = "tblxkLHxg9K3uHyp"         # Table ID
+# 优先从环境变量获取，兜底使用默认值 (方便本地测试)
+APP_ID = os.getenv("FEISHU_APP_ID", "cli_a9d821dd2cb89bcb")
+APP_SECRET = os.getenv("FEISHU_APP_SECRET", "lCRZc6MbLMZwQ55mEXYivhxL2Ey7uJzb")
+APP_TOKEN = os.getenv("FEISHU_BASE_ID", "ROVGbzfTfaEGjosDkxHck65Cnmx") # Base Token
+TABLE_ID = os.getenv("FEISHU_TABLE_ID", "tblxkLHxg9K3uHyp")         # Table ID
 
 # 数据源文件
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
