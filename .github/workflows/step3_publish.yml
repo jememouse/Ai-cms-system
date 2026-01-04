@@ -34,6 +34,7 @@ jobs:
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         WELLCMS_USERNAME: ${{ secrets.WELLCMS_USERNAME }}
         WELLCMS_PASSWORD: ${{ secrets.WELLCMS_PASSWORD }}
+        PUBLISH_CONFIG_JSON: ${{ secrets.PUBLISH_CONFIG_JSON }}
         TZ: 'Asia/Shanghai'
       run: |
         uv run python -m step3_publish.runner

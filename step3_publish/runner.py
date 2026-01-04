@@ -15,13 +15,27 @@ from .wellcms_rpa import WellCMSPublisher
 
 
 def load_publish_config():
-    """加载发布配置"""
-    if not os.path.exists(config.PUBLISH_CONFIG_FILE):
-        print(f"⚠️ 配置文件不存在: {config.PUBLISH_CONFIG_FILE}")
-        return None
-    
-    with open(config.PUBLISH_CONFIG_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    """加载发布配置 (优先文件，其次环境变量)"""
+    # 1. 尝试从文件加载
+    if os.path.exists(config.PUBLISH_CONFIG_FILE):
+        try:
+            with open(config.PUBLISH_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                print(f"📖 读取本地配置文件: {config.PUBLISH_CONFIG_FILE}")
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ 读取配置文件失败: {e}")
+
+    # 2. 尝试从环境变量加载 (用于 GitHub Actions Secret)
+    config_json = os.getenv("PUBLISH_CONFIG_JSON")
+    if config_json:
+        try:
+            print("🔐 读取环境变量配置: PUBLISH_CONFIG_JSON")
+            return json.loads(config_json)
+        except json.JSONDecodeError as e:
+            print(f"⚠️ 解析环境变量配置失败: {e}")
+            
+    print(f"⚠️ 未找到有效配置 (文件: {config.PUBLISH_CONFIG_FILE} 或 环境变量)")
+    return None
 
 
 def run(config_file: str = None):
