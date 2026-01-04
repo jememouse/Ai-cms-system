@@ -1,4 +1,7 @@
-# generate_topics.py
+# trends_generator/generate_topics.py
+"""
+SEO 标题生成模块
+"""
 import json
 import os
 import requests
@@ -9,8 +12,8 @@ from dotenv import load_dotenv
 # 加载 .env 环境变量
 load_dotenv()
 
-# 引用同一套配置
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 文件路径 (指向项目根目录)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_FILE = os.path.join(BASE_DIR, 'box_artist_config.json')
 TRENDS_FILE = os.path.join(BASE_DIR, 'trends_data.json')
 OUTPUT_FILE = os.path.join(BASE_DIR, 'generated_seo_data.json')

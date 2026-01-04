@@ -1,6 +1,8 @@
-# feishu_uploader.py
+# trends_generator/feishu_uploader.py
+"""
+飞书多维表格上传模块
+"""
 import requests
-
 import json
 import time
 import os
@@ -13,11 +15,11 @@ load_dotenv()
 # 优先从环境变量获取，兜底使用默认值 (方便本地测试)
 APP_ID = os.getenv("FEISHU_APP_ID", "cli_a9d821dd2cb89bcb")
 APP_SECRET = os.getenv("FEISHU_APP_SECRET", "lCRZc6MbLMZwQ55mEXYivhxL2Ey7uJzb")
-APP_TOKEN = os.getenv("FEISHU_BASE_ID", "ROVGbzfTfaEGjosDkxHck65Cnmx") # Base Token
-TABLE_ID = os.getenv("FEISHU_TABLE_ID", "tblxkLHxg9K3uHyp")         # Table ID
+APP_TOKEN = os.getenv("FEISHU_BASE_ID", "ROVGbzfTfaEGjosDkxHck65Cnmx")
+TABLE_ID = os.getenv("FEISHU_TABLE_ID", "tblxkLHxg9K3uHyp")
 
-# 数据源文件
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 数据源文件 (指向项目根目录)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_FILE = os.path.join(BASE_DIR, "generated_seo_data.json")
 # ==========================================
 

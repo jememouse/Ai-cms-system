@@ -1,18 +1,21 @@
-# main_scheduler.py
+# trends_generator/scheduler.py
+"""
+热点标题生成调度器
+"""
 import schedule
 import time
 import os
-import fetch_trends_ai
-import generate_topics
-import feishu_uploader
 import datetime
+from . import fetch_trends
+from . import generate_topics
+from . import feishu_uploader
 
 def job():
     print(f"\n⏰ 任务开始执行: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # 1. 抓取与分析
     print(">>> Step 1: Fetching & Analyzing Trends")
-    fetch_trends_ai.main()
+    fetch_trends.main()
     
     # 2. 生成标题
     print(">>> Step 2: Generating Topics")

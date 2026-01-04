@@ -1,4 +1,7 @@
-# fetch_trends_ai.py
+# trends_generator/fetch_trends.py
+"""
+热点抓取与 AI 分析模块
+"""
 import requests
 import json
 import os
@@ -21,9 +24,10 @@ TOUTIAO_HOT_URL = "https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_p
 BILIBILI_HOT_URL = "https://api.bilibili.com/x/web-interface/ranking/v2?rid=0&type=all"
 KR36_HOT_URL = "https://36kr.com/newsflashes"
 
-# 文件路径
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 文件路径 (指向项目根目录)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRENDS_FILE = os.path.join(BASE_DIR, "trends_data.json")
+CONFIG_FILE = os.path.join(BASE_DIR, "box_artist_config.json")
 
 # 通用 Header
 HEADERS = {
@@ -259,10 +263,9 @@ def analyze_trends_with_ai(trends):
 
 def main():
     # 0. 读取配置获取种子词
-    config_path = os.path.join(BASE_DIR, 'box_artist_config.json')
     mining_seeds = []
-    if os.path.exists(config_path):
-        with open(config_path, 'r', encoding='utf-8') as f:
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
             mining_seeds = cfg.get("mining_seeds", [])
 

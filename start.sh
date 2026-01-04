@@ -1,5 +1,5 @@
 #!/bin/bash
-# 盒艺家 SEO 自动化 - 一键启动脚本
+# 盒艺家热点标题生成 - 一键启动脚本
 # 使用方法: ./start.sh [选项]
 #   无参数: 启动定时调度器
 #   --now: 立即执行一次任务
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 echo -e "${CYAN}"
 echo "==========================================="
-echo "   盒艺家 SEO 自动化系统"
+echo "   盒艺家热点标题生成系统"
 echo "   heyijiapack.com"
 echo "==========================================="
 echo -e "${NC}"
@@ -51,7 +51,7 @@ uv sync
 case "${1:-}" in
     --now|-n)
         echo -e "${GREEN}🚀 立即执行一次任务...${NC}"
-        uv run python -c "from main_scheduler import job; job()"
+        uv run python -c "from trends_generator.scheduler import job; job()"
         ;;
     --help|-h)
         echo "用法: ./start.sh [选项]"
@@ -63,6 +63,6 @@ case "${1:-}" in
         ;;
     *)
         echo -e "${GREEN}⏰ 启动定时调度器...${NC}"
-        uv run main_scheduler.py
+        uv run python -m trends_generator.scheduler
         ;;
 esac
