@@ -41,7 +41,7 @@ def run(config_file: str = None):
         return
     
     accounts = publish_config.get("accounts", [])
-    default_interval = publish_config.get("default_interval_seconds", 30)
+    default_interval = publish_config.get("default_interval_minutes", 1)
     
     if not accounts:
         print("⚠️ 没有配置任何账号")
@@ -59,10 +59,11 @@ def run(config_file: str = None):
         username = account.get("username")
         password = account.get("password")
         categories = account.get("categories", {})
-        interval = account.get("interval_seconds", default_interval)  # 账号独立间隔
+        interval_min = account.get("interval_minutes", default_interval)  # 账号独立间隔(分钟)
+        interval_sec = interval_min * 60  # 转换为秒
         
         print(f"\n{'='*40}")
-        print(f"👤 账号 [{acc_idx + 1}/{len(accounts)}]: {username} (间隔 {interval}s)")
+        print(f"👤 账号 [{acc_idx + 1}/{len(accounts)}]: {username} (间隔 {interval_min} 分钟)")
         print(f"{'='*40}")
         
         # 创建该账号的发布器
@@ -119,8 +120,8 @@ def run(config_file: str = None):
                 
                 # 间隔等待
                 if idx < len(records) - 1:
-                    print(f"      ⏳ 等待 {interval} 秒...")
-                    time.sleep(interval)
+                    print(f"      ⏳ 等待 {interval_min} 分钟...")
+                    time.sleep(interval_sec)
     
     print("\n" + "=" * 50)
     print(f"📊 节点3完成!")
