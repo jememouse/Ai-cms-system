@@ -1,11 +1,11 @@
-# auto_publisher/feishu_client.py
+# shared/feishu_client.py
 """
-飞书多维表格客户端
-支持读取待发布记录和更新状态
+飞书多维表格客户端 (共享)
+支持读取不同状态的记录和更新状态
 """
 import requests
 from typing import List, Dict, Optional
-from .config import config
+from . import config
 
 
 class FeishuClient:
@@ -38,37 +38,32 @@ class FeishuClient:
             return None
     
     def _headers(self) -> Dict:
-        """请求头"""
         return {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json; charset=utf-8"
         }
     
-    def fetch_pending_records(self, category: str, limit: int = 2) -> List[Dict]:
+    def fetch_records_by_status(self, status: str, category: str = None, limit: int = 2) -> List[Dict]:
         """
-        获取待发布的记录
+        获取指定状态的记录
         
         Args:
-            category: 分类名称 (专业知识/行业资讯/产品介绍)
-            limit: 每个分类最多获取几条
-            
-        Returns:
-            记录列表，每条包含 record_id, topic, category
+            status: 状态 (Pending/Ready/Published)
+            category: 可选分类筛选
+            limit: 最大条数
         """
         if not self.token:
             return []
         
         url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{self.table_id}/records/search"
         
+        conditions = [{"field_name": "Status", "operator": "is", "value": [status]}]
+        if category:
+            conditions.append({"field_name": "大项分类", "operator": "is", "value": [category]})
+        
         payload = {
-            "filter": {
-                "conjunction": "and",
-                "conditions": [
-                    {"field_name": "Status", "operator": "is", "value": ["Pending"]},
-                    {"field_name": "大项分类", "operator": "is", "value": [category]}
-                ]
-            },
-            "page_size": limit  # 限制返回条数
+            "filter": {"conjunction": "and", "conditions": conditions},
+            "page_size": limit
         }
         
         try:
@@ -76,21 +71,16 @@ class FeishuClient:
             data = resp.json()
             
             if data.get("code") != 0:
-                print(f"⚠️ 获取 {category} 记录失败: {data.get('msg')}")
+                print(f"⚠️ 获取记录失败: {data.get('msg')}")
                 return []
             
-            items = data.get("data", {}).get("items", [])
-            
-            # 强制限制返回条数（双重保险）
-            items = items[:limit]
-            
+            items = data.get("data", {}).get("items", [])[:limit]
             results = []
             
             for item in items:
                 fields = item.get("fields", {})
                 topic_field = fields.get("Topic", [])
                 
-                # Topic 可能是文本数组
                 if isinstance(topic_field, list) and len(topic_field) > 0:
                     topic = topic_field[0].get("text", "") if isinstance(topic_field[0], dict) else str(topic_field[0])
                 else:
@@ -99,61 +89,61 @@ class FeishuClient:
                 results.append({
                     "record_id": item.get("record_id"),
                     "topic": topic,
-                    "category": category
+                    "category": fields.get("大项分类", "行业资讯"),
+                    "title": fields.get("Title", ""),
+                    "html_content": fields.get("HTML_Content", ""),
+                    "summary": fields.get("摘要", ""),
+                    "keywords": fields.get("关键词", ""),
+                    "description": fields.get("描述", ""),
+                    "tags": fields.get("Tags", ""),
                 })
             
             total = data.get("data", {}).get("total", 0)
-            print(f"   📋 {category}: 获取 {len(results)} 条 (共 {total} 条待发布)")
+            filter_desc = f"{category or '全部'}"
+            print(f"   📋 [{filter_desc}] 获取 {len(results)} 条 {status} 记录 (共 {total} 条)")
             return results
             
         except Exception as e:
             print(f"⚠️ 获取记录网络错误: {e}")
             return []
     
-    def fetch_all_pending(self) -> List[Dict]:
-        """获取所有分类的待发布记录"""
-        all_records = []
-        for category in config.CATEGORY_MAP.keys():
-            records = self.fetch_pending_records(category, config.MAX_ARTICLES_PER_CATEGORY)
-            all_records.extend(records)
-        return all_records
-    
-    def update_record_status(self, record_id: str, article_data: Dict) -> bool:
-        """
-        更新记录状态为 Published，并回填生成的内容
-        
-        Args:
-            record_id: 飞书记录 ID
-            article_data: 包含 title, html_content, summary, keywords, description, tags
-        """
+    def update_record(self, record_id: str, fields: Dict) -> bool:
+        """更新记录字段"""
         if not self.token:
             return False
         
         url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{self.table_id}/records/{record_id}"
         
-        payload = {
-            "fields": {
-                "Status": "Published",
-                "Title": article_data.get("title", ""),
-                "HTML_Content": article_data.get("html_content", ""),
-                "摘要": article_data.get("summary", ""),
-                "关键词": article_data.get("keywords", ""),
-                "描述": article_data.get("description", ""),
-                "Tags": article_data.get("tags", "")
-            }
-        }
-        
         try:
-            resp = requests.put(url, headers=self._headers(), json=payload, timeout=30)
+            resp = requests.put(url, headers=self._headers(), json={"fields": fields}, timeout=30)
             data = resp.json()
             
             if data.get("code") == 0:
-                print(f"   ✅ 已更新飞书状态: {record_id}")
                 return True
             else:
                 print(f"   ❌ 更新失败: {data.get('msg')}")
                 return False
-                
         except Exception as e:
             print(f"   ⚠️ 更新网络错误: {e}")
+            return False
+    
+    def batch_create_records(self, records: List[Dict]) -> bool:
+        """批量创建记录"""
+        if not self.token or not records:
+            return False
+        
+        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{self.table_id}/records/batch_create"
+        
+        payload_records = [{"fields": r} for r in records]
+        
+        try:
+            resp = requests.post(url, headers=self._headers(), json={"records": payload_records[:50]}, timeout=30)
+            if resp.json().get("code") == 0:
+                print(f"   ✅ 成功上传 {len(payload_records[:50])} 条记录")
+                return True
+            else:
+                print(f"   ❌ 上传失败: {resp.text}")
+                return False
+        except Exception as e:
+            print(f"   ⚠️ 上传网络错误: {e}")
             return False

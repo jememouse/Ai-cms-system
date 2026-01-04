@@ -1,12 +1,16 @@
-# auto_publisher/wellcms_rpa.py
+# step3_publish/wellcms_rpa.py
 """
 WellCMS RPA 发布器
 使用 Playwright 自动登录并发布文章
 """
 import asyncio
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from typing import Dict, Optional
 from playwright.async_api import async_playwright, Page, Browser
-from .config import config
+from shared import config
 
 
 class WellCMSPublisher:
