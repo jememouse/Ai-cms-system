@@ -1,0 +1,39 @@
+name: Step3 - RPA 发布到 WellCMS
+
+on:
+  schedule:
+    # 北京时间 09:00, 12:00, 15:00, 18:00 (白天分时段发布) -> UTC 01:00, 04:00, 07:00, 10:00
+    - cron: '0 1,4,7,10 * * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  step3-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Install Playwright browsers
+      run: uv run playwright install chromium --with-deps
+
+    - name: Run Step3 - RPA 发布
+      env:
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+        FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+        FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}
+        FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+        WELLCMS_USERNAME: ${{ secrets.WELLCMS_USERNAME }}
+        WELLCMS_PASSWORD: ${{ secrets.WELLCMS_PASSWORD }}
+        TZ: 'Asia/Shanghai'
+      run: |
+        uv run python -m step3_publish.runner
