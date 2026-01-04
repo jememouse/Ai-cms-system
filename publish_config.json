@@ -3,7 +3,7 @@
         {
             "username": "product_manager",
             "password": "5227756c4aae247b",
-            "interval_minutes": 1,
+            "interval_minutes": 100,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -13,7 +13,7 @@
         {
             "username": "packaging_helper",
             "password": "5227756c4aae247b",
-            "interval_minutes": 2,
+            "interval_minutes": 120,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -23,7 +23,7 @@
         {
             "username": "pack_info_expert",
             "password": "5227756c4aae247b",
-            "interval_minutes": 1,
+            "interval_minutes": 110,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -33,7 +33,7 @@
         {
             "username": "HY_xiao_jia",
             "password": "5227756c4aae247b",
-            "interval_minutes": 3,
+            "interval_minutes": 130,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -43,7 +43,7 @@
         {
             "username": "HY_post_pro",
             "password": "5227756c4aae247b",
-            "interval_minutes": 1,
+            "interval_minutes": 110,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
