@@ -93,16 +93,29 @@ class FeishuClient:
                 else:
                     category = str(category_field) if category_field else "行业资讯"
                 
+                # 辅助函数：处理飞书富文本字段
+                def parse_text_field(field_value):
+                    if not field_value:
+                        return ""
+                    if isinstance(field_value, str):
+                        return field_value
+                    if isinstance(field_value, list) and len(field_value) > 0:
+                        first = field_value[0]
+                        if isinstance(first, dict):
+                            return first.get("text", "")
+                        return str(first)
+                    return str(field_value)
+                
                 results.append({
                     "record_id": item.get("record_id"),
                     "topic": topic,
                     "category": category,
-                    "title": fields.get("Title", ""),
-                    "html_content": fields.get("HTML_Content", ""),
-                    "summary": fields.get("摘要", ""),
-                    "keywords": fields.get("关键词", ""),
-                    "description": fields.get("描述", ""),
-                    "tags": fields.get("Tags", ""),
+                    "title": parse_text_field(fields.get("Title", "")),
+                    "html_content": parse_text_field(fields.get("HTML_Content", "")),
+                    "summary": parse_text_field(fields.get("摘要", "")),
+                    "keywords": parse_text_field(fields.get("关键词", "")),
+                    "description": parse_text_field(fields.get("描述", "")),
+                    "tags": parse_text_field(fields.get("Tags", "")),
                 })
             
             total = data.get("data", {}).get("total", 0)
