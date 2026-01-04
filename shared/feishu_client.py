@@ -84,12 +84,19 @@ class FeishuClient:
                 if isinstance(topic_field, list) and len(topic_field) > 0:
                     topic = topic_field[0].get("text", "") if isinstance(topic_field[0], dict) else str(topic_field[0])
                 else:
-                    topic = str(topic_field)
+                    topic = str(topic_field) if topic_field else ""
+                
+                # 处理分类字段（可能是字符串或列表）
+                category_field = fields.get("大项分类", "行业资讯")
+                if isinstance(category_field, list) and len(category_field) > 0:
+                    category = category_field[0] if isinstance(category_field[0], str) else str(category_field[0])
+                else:
+                    category = str(category_field) if category_field else "行业资讯"
                 
                 results.append({
                     "record_id": item.get("record_id"),
                     "topic": topic,
-                    "category": fields.get("大项分类", "行业资讯"),
+                    "category": category,
                     "title": fields.get("Title", ""),
                     "html_content": fields.get("HTML_Content", ""),
                     "summary": fields.get("摘要", ""),
