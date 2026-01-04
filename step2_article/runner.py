@@ -1,6 +1,6 @@
 # step2_article/runner.py
 """
-节点2 执行器: 从飞书读取 Pending -> AI 生成文章 -> 更新为 Ready
+节点2 执行器: 从飞书读取 Ready -> AI 生成文章 -> 更新为 Pending
 """
 import sys
 import os
@@ -26,18 +26,18 @@ def run(max_per_category: int = 2):
     client = FeishuClient()
     generator = ArticleGenerator()
     
-    # 按分类获取 Pending 记录
+    # 按分类获取 Ready 记录 (节点1完成的)
     all_records = []
     for category in config.CATEGORY_MAP.keys():
         records = client.fetch_records_by_status(
-            status=config.STATUS_PENDING,
+            status=config.STATUS_READY,  # 读取 Ready 状态
             category=category,
             limit=max_per_category
         )
         all_records.extend(records)
     
     if not all_records:
-        print("⚠️ 没有待处理的 Pending 记录")
+        print("⚠️ 没有待处理的 Ready 记录")
         return
     
     print(f"\n📝 共获取 {len(all_records)} 条待生成文章\n")
@@ -59,7 +59,7 @@ def run(max_per_category: int = 2):
         
         # 更新飞书
         fields = {
-            "Status": config.STATUS_READY,  # 状态改为 Ready
+            "Status": config.STATUS_PENDING,  # 节点2完成: Pending
             "Title": article.get("title", ""),
             "HTML_Content": article.get("html_content", ""),
             "摘要": article.get("summary", ""),
@@ -69,13 +69,13 @@ def run(max_per_category: int = 2):
         }
         
         if client.update_record(record["record_id"], fields):
-            print(f"   ✅ 已更新为 Ready")
+            print(f"   ✅ 已更新为 Pending")
             success_count += 1
         
         time.sleep(1)  # 避免 API 限速
     
     print("\n" + "=" * 50)
-    print(f"📊 节点2完成! 成功生成 {success_count}/{len(all_records)} 篇文章")
+    print(f"📊 节点2完成! 成功生成 {success_count}/{len(all_records)} 篇文章 (Status=Pending)")
     print("=" * 50)
 
 

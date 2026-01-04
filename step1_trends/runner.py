@@ -49,7 +49,7 @@ def run():
         feishu_records.append({
             "Topic": item.get("Topic", ""),
             "大项分类": item.get("大项分类", "行业资讯"),
-            "Status": config.STATUS_PENDING  # 标记为 Pending
+            "Status": config.STATUS_READY  # 节点1完成: Ready
         })
     
     client = FeishuClient()
@@ -60,7 +60,7 @@ def run():
         batch = feishu_records[i:i + batch_size]
         client.batch_create_records(batch)
     
-    print(f"\n✅ 节点1完成！共上传 {len(feishu_records)} 条标题 (Status=Pending)")
+    print(f"\n✅ 节点1完成！共上传 {len(feishu_records)} 条标题 (Status=Ready)")
 
 
 if __name__ == "__main__":

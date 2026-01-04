@@ -37,7 +37,7 @@ CATEGORY_MAP = {
     "产品介绍": "3"
 }
 
-# 状态常量
-STATUS_PENDING = "Pending"   # 标题已生成，等待文章生成
-STATUS_READY = "Ready"       # 文章已生成，等待发布
-STATUS_PUBLISHED = "Published"  # 已发布
+# 状态常量 (按节点流转)
+STATUS_READY = "Ready"         # 节点1完成: 标题已生成，等待文章生成
+STATUS_PENDING = "Pending"     # 节点2完成: 文章已生成，等待发布
+STATUS_PUBLISHED = "Published" # 节点3完成: 已发布

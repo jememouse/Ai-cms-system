@@ -1,6 +1,6 @@
 # step3_publish/runner.py
 """
-节点3 执行器: 从飞书读取 Ready -> RPA 发布 -> 更新为 Published
+节点3 执行器: 从飞书读取 Pending -> RPA 发布 -> 更新为 Published
 """
 import sys
 import os
@@ -26,18 +26,18 @@ def run(max_per_category: int = 2):
     client = FeishuClient()
     publisher = WellCMSPublisher()
     
-    # 按分类获取 Ready 记录
+    # 按分类获取 Pending 记录 (节点2完成的)
     all_records = []
     for category in config.CATEGORY_MAP.keys():
         records = client.fetch_records_by_status(
-            status=config.STATUS_READY,
+            status=config.STATUS_PENDING,  # 读取 Pending 状态
             category=category,
             limit=max_per_category
         )
         all_records.extend(records)
     
     if not all_records:
-        print("⚠️ 没有待发布的 Ready 记录")
+        print("⚠️ 没有待发布的 Pending 记录")
         return
     
     print(f"\n📝 共获取 {len(all_records)} 条待发布文章\n")
