@@ -12,13 +12,15 @@ from shared import config
 from .wellcms_rpa import WellCMSPublisher
 
 
-def run(max_per_category: int = 2):
+def run(max_per_category: int = None):
     """
     执行节点3流程
     
     Args:
-        max_per_category: 每个分类最多发布几条
+        max_per_category: 每个分类最多发布几条 (默认从 config 读取)
     """
+    if max_per_category is None:
+        max_per_category = config.MAX_ARTICLES_PER_CATEGORY
     print("\n" + "=" * 50)
     print("📤 节点3: RPA 发布到 WellCMS")
     print("=" * 50 + "\n")
