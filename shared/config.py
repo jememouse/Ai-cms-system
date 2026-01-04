@@ -42,5 +42,6 @@ STATUS_READY = "Ready"         # 节点1完成: 标题已生成，等待文章�
 STATUS_PENDING = "Pending"     # 节点2完成: 文章已生成，等待发布
 STATUS_PUBLISHED = "Published" # 节点3完成: 已发布
 
-# 每分类最大处理数量 (节点2、节点3)
-MAX_ARTICLES_PER_CATEGORY = int(os.getenv("MAX_ARTICLES_PER_CATEGORY", "2"))
+# 每分类最大处理数量
+MAX_GENERATE_PER_CATEGORY = int(os.getenv("MAX_GENERATE_PER_CATEGORY", "10"))  # 节点2: 文章生成
+MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "2"))     # 节点3: RPA 发布
