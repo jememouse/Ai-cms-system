@@ -1,0 +1,51 @@
+{
+    "accounts": [
+        {
+            "username": "product_manager",
+            "password": "5227756c4aae247b",
+            "categories": {
+                "专业知识": 2,
+                "行业资讯": 2,
+                "产品介绍": 2
+            }
+        },
+        {
+            "username": "packaging_helper",
+            "password": "5227756c4aae247b",
+            "categories": {
+                "专业知识": 2,
+                "行业资讯": 2,
+                "产品介绍": 2
+            }
+        },
+        {
+            "username": "pack_info_expert",
+            "password": "5227756c4aae247b",
+            "categories": {
+                "专业知识": 2,
+                "行业资讯": 2,
+                "产品介绍": 2
+            }
+        },
+        {
+            "username": "HY_xiao_jia",
+            "password": "5227756c4aae247b",
+            "categories": {
+                "专业知识": 2,
+                "行业资讯": 2,
+                "产品介绍": 2
+            }
+        },
+        {
+            "username": "HY_post_pro",
+            "password": "5227756c4aae247b",
+            "categories": {
+                "专业知识": 2,
+                "行业资讯": 2,
+                "产品介绍": 2
+            }
+        }
+    ],
+    "interval_seconds": 30,
+    "comment": "每个账号按分类发布指定数量的文章，间隔30秒"
+}

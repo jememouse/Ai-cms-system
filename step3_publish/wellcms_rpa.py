@@ -16,9 +16,16 @@ from shared import config
 class WellCMSPublisher:
     """WellCMS RPA 发布器"""
     
-    def __init__(self):
-        self.username = config.WELLCMS_USERNAME
-        self.password = config.WELLCMS_PASSWORD
+    def __init__(self, username: str = None, password: str = None):
+        """
+        初始化发布器
+        
+        Args:
+            username: CMS 用户名 (不传则使用 config 默认值)
+            password: CMS 密码 (不传则使用 config 默认值)
+        """
+        self.username = username or config.WELLCMS_USERNAME
+        self.password = password or config.WELLCMS_PASSWORD
         self.login_url = config.WELLCMS_LOGIN_URL
         self.admin_url = config.WELLCMS_ADMIN_URL
         self.post_url = config.WELLCMS_POST_URL

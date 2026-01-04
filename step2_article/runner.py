@@ -17,10 +17,11 @@ def run(max_per_category: int = None):
     执行节点2流程
     
     Args:
-        max_per_category: 每个分类最多处理几条 (默认从 config.MAX_GENERATE_PER_CATEGORY 读取)
+        max_per_category: 每个分类最多处理几条 (默认 100，即处理全部)
     """
     if max_per_category is None:
         max_per_category = config.MAX_GENERATE_PER_CATEGORY
+    
     print("\n" + "=" * 50)
     print("✍️  节点2: AI 文章生成")
     print("=" * 50 + "\n")
