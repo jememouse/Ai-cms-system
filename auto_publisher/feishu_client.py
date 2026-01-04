@@ -68,7 +68,7 @@ class FeishuClient:
                     {"field_name": "大项分类", "operator": "is", "value": [category]}
                 ]
             },
-            "page_size": limit
+            "page_size": limit  # 限制返回条数
         }
         
         try:
@@ -80,6 +80,10 @@ class FeishuClient:
                 return []
             
             items = data.get("data", {}).get("items", [])
+            
+            # 强制限制返回条数（双重保险）
+            items = items[:limit]
+            
             results = []
             
             for item in items:
@@ -98,7 +102,8 @@ class FeishuClient:
                     "category": category
                 })
             
-            print(f"   📋 {category}: 获取到 {len(results)} 条待发布记录")
+            total = data.get("data", {}).get("total", 0)
+            print(f"   📋 {category}: 获取 {len(results)} 条 (共 {total} 条待发布)")
             return results
             
         except Exception as e:
