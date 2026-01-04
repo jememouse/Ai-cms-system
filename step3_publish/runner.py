@@ -41,13 +41,13 @@ def run(config_file: str = None):
         return
     
     accounts = publish_config.get("accounts", [])
-    interval = publish_config.get("interval_seconds", 30)
+    default_interval = publish_config.get("default_interval_seconds", 30)
     
     if not accounts:
         print("⚠️ 没有配置任何账号")
         return
     
-    print(f"📋 共 {len(accounts)} 个账号，每篇间隔 {interval} 秒\n")
+    print(f"📋 共 {len(accounts)} 个账号\n")
     
     client = FeishuClient()
     
@@ -59,9 +59,10 @@ def run(config_file: str = None):
         username = account.get("username")
         password = account.get("password")
         categories = account.get("categories", {})
+        interval = account.get("interval_seconds", default_interval)  # 账号独立间隔
         
         print(f"\n{'='*40}")
-        print(f"👤 账号 [{acc_idx + 1}/{len(accounts)}]: {username}")
+        print(f"👤 账号 [{acc_idx + 1}/{len(accounts)}]: {username} (间隔 {interval}s)")
         print(f"{'='*40}")
         
         # 创建该账号的发布器

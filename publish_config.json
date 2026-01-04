@@ -3,6 +3,7 @@
         {
             "username": "product_manager",
             "password": "5227756c4aae247b",
+            "interval_seconds": 30,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -12,6 +13,7 @@
         {
             "username": "packaging_helper",
             "password": "5227756c4aae247b",
+            "interval_seconds": 45,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -21,6 +23,7 @@
         {
             "username": "pack_info_expert",
             "password": "5227756c4aae247b",
+            "interval_seconds": 30,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -30,6 +33,7 @@
         {
             "username": "HY_xiao_jia",
             "password": "5227756c4aae247b",
+            "interval_seconds": 60,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -39,6 +43,7 @@
         {
             "username": "HY_post_pro",
             "password": "5227756c4aae247b",
+            "interval_seconds": 30,
             "categories": {
                 "专业知识": 2,
                 "行业资讯": 2,
@@ -46,6 +51,6 @@
             }
         }
     ],
-    "interval_seconds": 30,
-    "comment": "每个账号按分类发布指定数量的文章，间隔30秒"
+    "default_interval_seconds": 30,
+    "comment": "每个账号可独立配置 interval_seconds，未配置则使用 default_interval_seconds"
 }
