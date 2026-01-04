@@ -1,20 +1,20 @@
 # step3_publish/wellcms_rpa.py
 """
 WellCMS RPA 发布器
-使用 Playwright 自动登录并发布文章
+使用 Playwright (Sync) 自动登录并发布文章
 """
-import asyncio
 import sys
 import os
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import Dict, Optional
-from playwright.async_api import async_playwright, Page, Browser
+from playwright.sync_api import sync_playwright, Page, Browser
 from shared import config
 
 
 class WellCMSPublisher:
-    """WellCMS RPA 发布器"""
+    """WellCMS RPA 发布器 (同步版)"""
     
     def __init__(self, username: str = None, password: str = None):
         """
@@ -29,49 +29,52 @@ class WellCMSPublisher:
         self.login_url = config.WELLCMS_LOGIN_URL
         self.admin_url = config.WELLCMS_ADMIN_URL
         self.post_url = config.WELLCMS_POST_URL
+        self.playwright = None
         self.browser: Optional[Browser] = None
         self.page: Optional[Page] = None
     
-    async def _init_browser(self):
+    def _init_browser(self):
         """初始化浏览器"""
-        playwright = await async_playwright().start()
-        self.browser = await playwright.chromium.launch(headless=True)
-        self.page = await self.browser.new_page()
+        self.playwright = sync_playwright().start()
+        self.browser = self.playwright.chromium.launch(headless=True)
+        self.page = self.browser.new_page()
     
-    async def _close_browser(self):
+    def _close_browser(self):
         """关闭浏览器"""
         if self.browser:
-            await self.browser.close()
+            self.browser.close()
+        if self.playwright:
+            self.playwright.stop()
     
-    async def _login(self) -> bool:
+    def _login(self) -> bool:
         """登录 WellCMS"""
         try:
-            await self.page.goto(self.login_url, wait_until="networkidle", timeout=60000)
-            await asyncio.sleep(2)
+            self.page.goto(self.login_url, wait_until="networkidle", timeout=60000)
+            time.sleep(2)
             
             # 检查是否需要登录
-            email_input = await self.page.query_selector('#email')
+            email_input = self.page.query_selector('#email')
             if email_input:
-                await self.page.fill('#email', self.username)
-                await self.page.fill('#password', self.password)
+                self.page.fill('#email', self.username)
+                self.page.fill('#password', self.password)
                 
                 # 点击登录按钮
-                submit_buttons = await self.page.query_selector_all('#submit')
+                submit_buttons = self.page.query_selector_all('#submit')
                 if submit_buttons:
-                    await submit_buttons[-1].click()
+                    submit_buttons[-1].click()
                 
-                await asyncio.sleep(5)
+                time.sleep(5)
             
             # 访问后台
-            await self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
-            await asyncio.sleep(3)
+            self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
+            time.sleep(3)
             
             # 检查是否需要输入后台密码
-            pwd_field = await self.page.query_selector('input[type=password]')
+            pwd_field = self.page.query_selector('input[type=password]')
             if pwd_field:
-                await pwd_field.fill(self.password)
-                await self.page.keyboard.press('Enter')
-                await asyncio.sleep(5)
+                pwd_field.fill(self.password)
+                self.page.keyboard.press('Enter')
+                time.sleep(5)
             
             print("   ✅ WellCMS 登录成功")
             return True
@@ -80,27 +83,27 @@ class WellCMSPublisher:
             print(f"   ❌ 登录失败: {e}")
             return False
     
-    async def _publish_article(self, article: Dict) -> bool:
+    def _publish_article(self, article: Dict) -> bool:
         """发布文章"""
         try:
             # 导航到发布页面
-            await self.page.goto(self.post_url, wait_until="domcontentloaded", timeout=60000)
-            await asyncio.sleep(3)
+            self.page.goto(self.post_url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(3)
             
             # 填写标题
-            await self.page.fill('#subject', article.get('title', ''))
+            self.page.fill('#subject', article.get('title', ''))
             
             # 选择分类
             category_id = article.get('category_id', '1')
             try:
-                await self.page.select_option('select[name="fid"]', category_id)
+                self.page.select_option('select[name="fid"]', category_id)
             except Exception:
                 pass  # 分类选择失败不阻塞
             
-            await asyncio.sleep(1)
+            time.sleep(1)
             
             # 填写 SEO 字段
-            await self.page.evaluate("""(data) => {
+            self.page.evaluate("""(data) => {
                 const brief = document.querySelector('#brief');
                 if (brief) brief.value = data.summary || '';
                 
@@ -116,26 +119,26 @@ class WellCMSPublisher:
             })
             
             # 勾选"禁止评论"
-            await self.page.evaluate("""() => {
+            self.page.evaluate("""() => {
                 const closedBox = document.querySelector('#closed-box');
                 if (closedBox && !closedBox.checked) {
                     closedBox.click();
                 }
             }""")
-            await asyncio.sleep(0.5)
+            time.sleep(0.5)
             
             # 填写 tags
             tags = article.get('tags', '')
             if tags:
-                await self.page.evaluate("""(tagsValue) => {
+                self.page.evaluate("""(tagsValue) => {
                     const tagsInput = document.querySelector('#tags');
                     if (tagsInput) tagsInput.value = tagsValue;
                 }""", tags)
-            await asyncio.sleep(0.5)
+            time.sleep(0.5)
             
             # 填写正文 (UEditor)
             html_content = article.get('html_content', '')
-            await self.page.evaluate("""(content) => {
+            self.page.evaluate("""(content) => {
                 // 尝试 UMeditor
                 if (typeof UM !== 'undefined') {
                     try { UM.getEditor('message').setContent(content); return; } catch(e) {}
@@ -148,13 +151,13 @@ class WellCMSPublisher:
                 const el = document.querySelector('#message');
                 if (el) el.value = content;
             }""", html_content)
-            await asyncio.sleep(2)
+            time.sleep(2)
             
             # 点击提交
-            await self.page.evaluate("""() => {
+            self.page.evaluate("""() => {
                 document.getElementById('submit').click();
             }""")
-            await asyncio.sleep(10)
+            time.sleep(10)
             
             print(f"   ✅ 文章发布成功: {article.get('title', '')}")
             return True
@@ -163,24 +166,21 @@ class WellCMSPublisher:
             print(f"   ❌ 发布失败: {e}")
             return False
     
-    async def publish(self, article: Dict) -> bool:
+    def publish(self, article: Dict) -> bool:
         """
-        发布文章到 WellCMS
-        
-        Args:
-            article: 文章数据，包含 title, html_content, category_id, summary, keywords, description, tags
+        发布文章到 WellCMS (同步)
         """
         try:
-            await self._init_browser()
+            self._init_browser()
             
-            if not await self._login():
+            if not self._login():
                 return False
             
-            return await self._publish_article(article)
+            return self._publish_article(article)
             
         finally:
-            await self._close_browser()
-    
+            self._close_browser()
+            
     def publish_sync(self, article: Dict) -> bool:
-        """同步版本的发布方法"""
-        return asyncio.run(self.publish(article))
+        """兼容旧接口"""
+        return self.publish(article)
