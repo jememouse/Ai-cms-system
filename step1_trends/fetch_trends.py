@@ -192,7 +192,64 @@ def fetch_baidu_suggestions(seed_words):
         except Exception as e:
             print(f"   ❌ 挖掘 '{seed}' 失败: {e}")
             
-    print(f"   -> 总计获取 {len(suggestions)} 个长尾需求")
+    print(f"   -> 总计获取 {len(suggestions)} 个百度长尾需求")
+    return suggestions
+
+def fetch_1688_suggestions(seed_words):
+    """挖掘1688下拉推荐词 (B2B源头采购需求)"""
+    if not seed_words:
+        return []
+        
+    print(f"🏭 开始挖掘 1688 (B2B) 长尾需求...")
+    suggestions = []
+    import random
+    # 随机选取 10 个词进行挖掘，防止请求过多
+    target_seeds = random.sample(seed_words, min(10, len(seed_words)))
+    
+    for seed in target_seeds:
+        try:
+            # 1688 Suggest API
+            url = f"https://suggest.1688.com/bin/suggest?code=utf-8&q={seed}"
+            resp = requests.get(url, headers=HEADERS, timeout=5)
+            data = resp.json()
+            if "result" in data:
+                top_words = [item['q'] for item in data['result'][:5]]
+                for w in top_words:
+                    suggestions.append(f"[1688采购] {w}")
+                print(f"   -> '{seed}' 挖到: {len(top_words)} 个")
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"   ❌ 1688挖掘 '{seed}' 失败: {e}")
+            
+    print(f"   -> 总计获取 {len(suggestions)} 个1688长尾需求")
+    return suggestions
+
+def fetch_taobao_suggestions(seed_words):
+    """挖掘淘宝下拉推荐词 (C端消费趋势)"""
+    if not seed_words:
+        return []
+
+    print(f"🛍️  开始挖掘淘宝 (C端) 消费趋势...")
+    suggestions = []
+    import random
+    target_seeds = random.sample(seed_words, min(10, len(seed_words)))
+
+    for seed in target_seeds:
+        try:
+            # Taobao Suggest API
+            url = f"https://suggest.taobao.com/sug?code=utf-8&q={seed}&k=1&area=c2c"
+            resp = requests.get(url, headers=HEADERS, timeout=5)
+            data = resp.json()
+            if "result" in data:
+                top_words = [item[0] for item in data['result'][:5]]
+                for w in top_words:
+                    suggestions.append(f"[淘宝热搜] {w}")
+                print(f"   -> '{seed}' 挖到: {len(top_words)} 个")
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"   ❌ 淘宝挖掘 '{seed}' 失败: {e}")
+
+    print(f"   -> 总计获取 {len(suggestions)} 个淘宝长尾需求")
     return suggestions
 
 def analyze_trends_with_ai(trends):
@@ -208,10 +265,15 @@ def analyze_trends_with_ai(trends):
     我是一个做【包装印刷、礼盒定制、品牌设计】的工厂。
     请分析以下全网热点，**务必挑选出 40 个** 最适合写文章的话题（数量不足扣分）。
     
-    **筛选优先级（重要）：**
-    1. **最高优先级**：带有 `[搜索需求]` 标记的内容。这是用户真实的精准搜索词，请尽可能多选。
-    2. **次优先级**：带有 `[36氪]` 或 `[头条]` 的商业/新消费/社会热点，且能与“礼品经济”、“产品包装”强关联的话题。
-    3. 过滤掉纯娱乐明星八卦，除非能强行关联到“应援礼盒”或“同款包装”。
+    **筛选优先级（精准营销版）：**
+    1. **S级（必选）**：带有 `[搜索需求]` 标记的内容。这是用户真实的 B2B 采购或精准定制需求，价值极高。
+    2. **A级（重点）**：能关联到“实体产品、礼品经济、消费行业（美妆/食品/电子）”的商业热点。例如：“某品牌联名礼盒”、“春节年货消费趋势”。
+    3. **B级（特定关联）**：能强行关联此行业标准的社会热点。例如：“环保政策（关联绿色包装）”、“快递新规（关联抗压纸箱）”。
+    4. **D级（坚决剔除）**：任何无法转化为“卖包装盒”的纯娱乐八卦、政治敏感、负面社会新闻。**宁缺毋滥，不要凑数。**
+    
+    **营销思考逻辑：**
+    - 看到“明星代言”，思考：他的粉丝会买同款应援礼盒吗？（是->选，否->弃）
+    - 看到“节日”，思考：商家需要提前备货礼盒包装吗？（是->选）
 
     热搜列表（已标记来源）：
     {trends_str}
@@ -274,6 +336,8 @@ def main():
     
     # 挖掘长尾需求 (优先)
     all_trends.extend(fetch_baidu_suggestions(mining_seeds))
+    all_trends.extend(fetch_1688_suggestions(mining_seeds))
+    all_trends.extend(fetch_taobao_suggestions(mining_seeds))
     
     # 手动标记来源
     for t in fetch_baidu_hot():
