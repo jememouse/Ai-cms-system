@@ -29,7 +29,7 @@ jobs:
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
         FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
-        MAX_GENERATE_PER_CATEGORY: '100'
+        MAX_GENERATE_PER_CATEGORY: '37'
         TZ: 'Asia/Shanghai'
       run: |
         uv run python -m step2_article.runner
