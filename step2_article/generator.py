@@ -63,8 +63,8 @@ class ArticleGenerator:
    - 在技术部分，适时植入 **“富士 Jet Press 750S”** 或 **“HP Indigo 120K”** 等顶级设备背书。
 5. **自动配图（重要）**：
    - 在正文第一段结束后，插入一张高质量配图。
-   - 使用标签：`<img src="https://image.pollinations.ai/prompt/{english_prompt}?width=800&height=600&nologo=true" alt="{title}" style="width:100%; border-radius:8px; margin: 20px 0;">`
-   - **注意**：必须将 `{english_prompt}` 替换为当前主题的**英文描述**（例如：`luxury_gift_box_packaging_design_minimalist`），单词间用下划线连接。
+   - 使用标签：`<img src="https://image.pollinations.ai/prompt/{{english_prompt}}?width=800&height=600&nologo=true" alt="{{title}}" style="width:100%; border-radius:8px; margin: 20px 0;">`
+   - **注意**：必须将 `{{english_prompt}}` 替换为当前主题的**英文描述**（例如：`luxury_gift_box_packaging_design_minimalist`），单词间用下划线连接。
 
 【JSON 结构要求】
 {{
