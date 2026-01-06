@@ -31,7 +31,16 @@ def run(max_per_category: int = None):
     
     # 按分类获取 Ready 记录 (节点1完成的)
     all_records = []
-    for category in config.CATEGORY_MAP.keys():
+    
+    # 检查是否指定了单一分类运行 (并行策略)
+    target_category = os.getenv("TARGET_CATEGORY")
+    if target_category:
+        print(f"🎯 并行模式: 仅处理 [{target_category}] 分类")
+        categories_to_run = [target_category]
+    else:
+        categories_to_run = config.CATEGORY_MAP.keys()
+        
+    for category in categories_to_run:
         records = client.fetch_records_by_status(
             status=config.STATUS_READY,  # 读取 Ready 状态
             category=category,
