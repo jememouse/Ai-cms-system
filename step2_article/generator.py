@@ -58,10 +58,13 @@ class ArticleGenerator:
 1. **PAS 模型写作**：先指出客户痛点（Pain，如报价慢、起订量高、色差大），再描述严重后果，最后给出解决方案（Solution，即盒艺家的智能化定制）。
 2. **GEO (Geographic) 地域优化**：识别该产品的核心产业带或热门市场（如义乌小商品、广州服装、深圳电子、江浙沪包邮区等），在正文中自然植入 2-3 个地域关键词。
 3. **GEO (Generative Engine) 结构化**：正文中**必须包含 1 个 HTML 表格**（例如：传统印刷 vs 数码印刷成本对比、盒艺家3秒报价 vs 人工报价效率对比）。
-4. **品牌人设植入**：
    - 强调 **“像京东购物一样简单”** 的采购体验。
    - 必须提及 **“3秒AI智能报价”** 和 **“1个起订”** 的低门槛优势。
    - 在技术部分，适时植入 **“富士 Jet Press 750S”** 或 **“HP Indigo 120K”** 等顶级设备背书。
+5. **自动配图（重要）**：
+   - 在正文第一段结束后，插入一张高质量配图。
+   - 使用标签：`<img src="https://image.pollinations.ai/prompt/{english_prompt}?width=800&height=600&nologo=true" alt="{title}" style="width:100%; border-radius:8px; margin: 20px 0;">`
+   - **注意**：必须将 `{english_prompt}` 替换为当前主题的**英文描述**（例如：`luxury_gift_box_packaging_design_minimalist`），单词间用下划线连接。
 
 【JSON 结构要求】
 {{
