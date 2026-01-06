@@ -46,12 +46,13 @@ def run(max_per_category: int = None):
     print(f"\n📝 共获取 {len(all_records)} 条待生成文章\n")
     
     success_count = 0
+    stats = {cat: 0 for cat in config.CATEGORY_MAP.keys()}
     
     for idx, record in enumerate(all_records):
         topic = record["topic"]
         category = record["category"]
         
-        print(f"\n--- [{idx + 1}/{len(all_records)}] {topic[:30]}... ---")
+        print(f"\n--- [{idx + 1}/{len(all_records)}] {category} | {topic[:20]}... ---")
         
         # 生成文章
         article = generator.generate(topic, category)
@@ -74,11 +75,17 @@ def run(max_per_category: int = None):
         if client.update_record(record["record_id"], fields):
             print(f"   ✅ 已更新为 Pending")
             success_count += 1
+            if category in stats:
+                stats[category] += 1
         
-        time.sleep(1)  # 避免 API 限速
+        time.sleep(2)  # 避免 API 限速（增加到 2 秒）
     
     print("\n" + "=" * 50)
-    print(f"📊 节点2完成! 成功生成 {success_count}/{len(all_records)} 篇文章 (Status=Pending)")
+    print(f"📊 节点2完成! 总计生成 {success_count}/{len(all_records)} 篇文章")
+    print("-" * 50)
+    print("各分类生成统计:")
+    for cat, count in stats.items():
+        print(f"  - {cat}: {count} 篇")
     print("=" * 50)
 
 

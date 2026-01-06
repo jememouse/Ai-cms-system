@@ -35,73 +35,122 @@ class ArticleGenerator:
         brand = self.brand_config.get('brand', {})
         brand_name = brand.get('name', '盒艺家')
         
-        prompt = f"""你是一个资深的行业内容编辑，专注于包装印刷行业。请根据用户提供的主题，撰写一篇专业、深入、有价值的文章。
+        # 品牌卖点
+        selling_points = "、".join(self.brand_config.get('selling_points', [])[:4])
+        
+        # 针对“专业知识”分类的特殊指令
+        tech_requirements = ""
+        if "专业知识" in category:
+            tech_requirements = """
+【专业深度增强（关键）】
+本文为"专业知识"科普，必须包含以下硬核干货（至少覆盖 2 点）：
+1. **印前与加工知识**：涉及文件处理参数（如：CMYK模式、出血位3mm、陷印处理）或加工流程细节。
+2. **工艺技术参数**：提及具体数值（如：烫金温度110℃、UV光固化能量、胶印175线等）。
+3. **材料科学**：深度解析材料属性（如：瓦楞楞型A/B/E区别、纸张克重与挺度关系）。
+4. **标准引用**：**必须引用至少1个**相关标准（如：ISO 12647 色彩标准、GB/T 6543 纸箱国标、G7认证、FSC森林认证等），展现权威性。
+"""
 
-【写作要求】
-1. 文章字数在 1000 字左右，内容充实、逻辑清晰
-2. 开篇要有引人入胜的导语，结尾要有总结或行动号召
-3. 使用专业术语，但要通俗易懂
-4. 可以适当使用数据、案例来增强说服力
-5. 段落分明，便于阅读
+        prompt = f"""你是一位拥有10年经验的 B2B 包装行业内容营销专家，精通 SEO（搜索引擎优化）和 GEO（生成式引擎优化）。
+请为主题 "{topic}"（分类：{category}）撰写一篇高转化率的深度行业文章。
 
-【重要格式指令】
-1. 必须直接输出标准的 JSON 字符串
-2. 严禁使用 Markdown 代码块
-3. 不要输出任何 JSON 之外的解释性文字
+{tech_requirements}
+【核心策略】
+1. **PAS 模型写作**：先指出客户痛点（Pain，如包装破损、档次低），再描述严重后果，最后给出解决方案。
+2. **GEO (Geographic) 地域优化**：识别该产品的核心产业带或热门市场（如义乌小商品、广州服装、深圳电子、江浙沪包邮区等），在正文中自然植入 2-3 个地域关键词（例如："适合发往北京上海一线城市"、"符合欧美出口标准"、"义乌源头工厂直发"）。
+3. **GEO (Generative Engine) 结构化**：正文中**必须包含 1 个 HTML 表格**（例如：不同材质对比、尺寸选型表、成本分析表），利于 AI 搜索提取。
+4. **转化引导**：文中自然植入"{brand_name}"品牌，强调"{selling_points}"等源头工厂优势。
 
 【JSON 结构要求】
 {{
-  "title": "标题（必须15字以内）",
-  "html_content": "纯HTML格式的正文（使用<h2>小标题，<p>分段，可用<ul><li>列表）",
+  "title": "标题（15-20字，包含地域或痛点词，吸引点击）",
+  "html_content": "纯HTML正文。
+    - 使用 <h2> 小标题分段
+    - **必须包含一个 <table> 表格**
+    - 结尾必须包含 <h3>常见问题 (FAQ)</h3> 和 3 个相关的问答对
+    - 重点词句加粗",
   "category_id": "{category_id}",
-  "summary": "文章摘要（120字以内）",
-  "keywords": "3-5个SEO关键词，逗号分隔",
-  "description": "SEO描述（120字以内）",
-  "tags": "3-5个标签，逗号分隔"
+  "summary": "文章摘要（100字左右，包含核心痛点和解决方案）",
+  "keywords": "5个SEO关键词，包含地域词（如：广州飞机盒定制）",
+  "description": "SEO描述（120字以内，吸引点击）",
+  "tags": "3-5个标签"
 }}
 
-【标题要求】
-- 标题控制在15个中文字符以内
-- 简洁有力、吸引眼球
-
-【品牌植入】
-- 仅在涉及"找工厂"、"定制"、"推荐"时可提及"{brand_name}"
-- 不要强制植入
+【写作禁忌】
+1. 严禁使用 "首先、其次、最后" 这种生硬的 AI 腔调。
+2. 严禁出现 "我们是最好的" 这种空洞口号，要用数据说话。
+3. 不要输出任何 JSON 之外的文字。无论如何只输出 JSON。
 
 【年份要求】
-- 涉及年份时使用 **2026年**，不用过时年份
+涉及年份统一使用 **2026年**。
 
 主题：{topic}
-分类：{category}"""
+"""
 
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
         
-        try:
-            resp = requests.post(self.api_url, headers=headers, json={
-                "model": "deepseek-chat",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": 4096
-            }, timeout=120)
-            
-            content = resp.json()["choices"][0]["message"]["content"]
-            content = content.replace("```json", "").replace("```", "").strip()
-            
-            # 提取 JSON
-            first_brace = content.find('{')
-            last_brace = content.rfind('}')
-            if first_brace != -1 and last_brace > first_brace:
-                content = content[first_brace:last_brace + 1]
-            
-            article = json.loads(content)
-            article["category_id"] = category_id
-            
-            print(f"   ✅ 文章生成成功: {article.get('title', '无标题')}")
-            return article
-            
-        except Exception as e:
-            print(f"   ⚠️ 文章生成失败: {e}")
-            return None
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = requests.post(self.api_url, headers=headers, json={
+                    "model": "deepseek-chat",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7,
+                    "max_tokens": 4096
+                }, timeout=120)
+                
+                # 检查 HTTP 状态码
+                if resp.status_code == 429:  # Rate limit
+                    wait_time = (attempt + 1) * 10  # 10s, 20s, 30s
+                    print(f"   ⏳ API 限流，等待 {wait_time} 秒后重试...")
+                    import time
+                    time.sleep(wait_time)
+                    continue
+                
+                if resp.status_code != 200:
+                    print(f"   ⚠️ API 返回状态码: {resp.status_code}")
+                    if attempt < max_retries - 1:
+                        import time
+                        time.sleep(5)
+                        continue
+                    return None
+                
+                content = resp.json()["choices"][0]["message"]["content"]
+                content = content.replace("```json", "").replace("```", "").strip()
+                
+                # 提取 JSON
+                first_brace = content.find('{')
+                last_brace = content.rfind('}')
+                if first_brace != -1 and last_brace > first_brace:
+                    content = content[first_brace:last_brace + 1]
+                
+                article = json.loads(content)
+                article["category_id"] = category_id
+                
+                print(f"   ✅ 文章生成成功: {article.get('title', '无标题')}")
+                return article
+                
+            except json.JSONDecodeError as e:
+                print(f"   ⚠️ JSON 解析失败: {e}")
+                return None
+            except KeyError as e:
+                print(f"   ⚠️ API 响应格式异常: {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(5)
+                    continue
+                return None
+            except requests.exceptions.Timeout:
+                print(f"   ⏳ 请求超时，第 {attempt + 1}/{max_retries} 次重试...")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(5)
+                    continue
+                return None
+            except Exception as e:
+                print(f"   ⚠️ 文章生成失败: {e}")
+                return None
+        
+        return None

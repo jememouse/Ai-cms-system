@@ -4,6 +4,7 @@
 支持读取不同状态的记录和更新状态
 """
 import requests
+import time
 from typing import List, Dict, Optional
 from . import config
 
@@ -11,12 +12,34 @@ from . import config
 class FeishuClient:
     """飞书多维表格客户端"""
     
+    # Token 有效期 2 小时，提前 5 分钟刷新
+    TOKEN_REFRESH_INTERVAL = 2 * 60 * 60 - 5 * 60  # 1小时55分钟
+    
     def __init__(self):
         self.app_id = config.FEISHU_APP_ID
         self.app_secret = config.FEISHU_APP_SECRET
         self.base_id = config.FEISHU_BASE_ID
         self.table_id = config.FEISHU_TABLE_ID
-        self.token = self._get_tenant_access_token()
+        self.token = None
+        self.token_acquired_at = 0
+        self._refresh_token()
+    
+    def _refresh_token(self) -> bool:
+        """刷新 Token"""
+        token = self._get_tenant_access_token()
+        if token:
+            self.token = token
+            self.token_acquired_at = time.time()
+            return True
+        return False
+    
+    def _ensure_valid_token(self) -> bool:
+        """确保 Token 有效，必要时自动刷新"""
+        elapsed = time.time() - self.token_acquired_at
+        if not self.token or elapsed >= self.TOKEN_REFRESH_INTERVAL:
+            print("🔄 Token 即将过期，正在刷新...")
+            return self._refresh_token()
+        return True
     
     def _get_tenant_access_token(self) -> Optional[str]:
         """获取租户访问令牌"""
@@ -52,7 +75,7 @@ class FeishuClient:
             category: 可选分类筛选
             limit: 最大条数
         """
-        if not self.token:
+        if not self._ensure_valid_token():
             return []
         
         url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{self.table_id}/records/search"
@@ -127,9 +150,16 @@ class FeishuClient:
             print(f"⚠️ 获取记录网络错误: {e}")
             return []
     
-    def update_record(self, record_id: str, fields: Dict) -> bool:
-        """更新记录字段"""
-        if not self.token:
+    def update_record(self, record_id: str, fields: Dict, retry: bool = True) -> bool:
+        """
+        更新记录字段
+        
+        Args:
+            record_id: 记录 ID
+            fields: 要更新的字段
+            retry: 是否在 Token 失效时重试
+        """
+        if not self._ensure_valid_token():
             return False
         
         url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{self.table_id}/records/{record_id}"
@@ -140,9 +170,16 @@ class FeishuClient:
             
             if data.get("code") == 0:
                 return True
-            else:
-                print(f"   ❌ 更新失败: {data.get('msg')}")
-                return False
+            
+            # Token 失效时尝试刷新后重试一次
+            error_msg = data.get('msg', '')
+            if retry and 'token' in error_msg.lower():
+                print("   🔄 Token 失效，尝试刷新后重试...")
+                if self._refresh_token():
+                    return self.update_record(record_id, fields, retry=False)
+            
+            print(f"   ❌ 更新失败: {error_msg}")
+            return False
         except Exception as e:
             print(f"   ⚠️ 更新网络错误: {e}")
             return False
