@@ -224,9 +224,19 @@ class WellCMSPublisher:
             
             # 点击提交
             # 点击提交并等待跳转
+            # 🚨 终极保险：强制将内容同步到 textarea
+            # 无论之前的注入方式如何，提交前必须确保 textarea 有值，因为表单提交的是 textarea
+            self.page.evaluate(f"""() => {{
+                var el = document.querySelector('textarea[name="message"]');
+                if (el) {{
+                    el.value = `{html_content.replace('`', '\`')}`;
+                }}
+            }}""")
+            print("      🛡️ 已强制同步内容到 Textarea")
+
+            # 点击提交按钮
             try:
-                # 使用 page.click 替代 evaluate，更容易等待导航
-                with self.page.expect_navigation(timeout=15000):
+                with self.page.expect_navigation(timeout=60000):
                     self.page.click('#submit')
             except Exception as e:
                 print(f"      ⚠️ 等待跳转超时或失败，尝试根据当前 URL 判断: {e}")
