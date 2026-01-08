@@ -229,8 +229,7 @@ class ArticleGenerator:
                 import re
                 # 1. 移除尾随逗号 (如 {"a": 1,} -> {"a": 1})
                 content = re.sub(r',(\s*[}\]])', r'\1', content)
-                # 2. 修复字符串中的未转义换行符
-                content = re.sub(r'(?<!\\)\n', r'\\n', content)
+                # 注意：不要转义换行符，JSON 标准允许字符串外的换行
                 
                 try:
                     article = json.loads(content)
