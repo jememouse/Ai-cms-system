@@ -15,3 +15,4 @@ trends_data.json
 generated_seo_data.json
 n8n_data/
 publish_config.json
+.cache/
