@@ -172,12 +172,13 @@ class ArticleGenerator:
         max_retries = 3
         for attempt in range(max_retries):
             try:
+                # 增加超时时间到 300秒
                 resp = requests.post(self.api_url, headers=headers, json={
                     "model": "deepseek-chat",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
                     "max_tokens": 4096
-                }, timeout=120)
+                }, timeout=300)
                 
                 # 检查 HTTP 状态码
                 if resp.status_code == 429:  # Rate limit
@@ -248,8 +249,21 @@ class ArticleGenerator:
                     time.sleep(5)
                     continue
                 return None
+            except requests.exceptions.RequestException as e:
+                # 捕获所有网络相关错误（包括 ConnectionError, ChunkedEncodingError 等）并重试
+                print(f"   ⚠️ 网络请求失败: {e}，第 {attempt + 1}/{max_retries} 次重试...")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(5)
+                    continue
+                return None
             except Exception as e:
-                print(f"   ⚠️ 文章生成失败: {e}")
+                print(f"   ⚠️ 文章生成失败(未知错误): {e}")
+                if attempt < max_retries - 1:
+                    print(f"   🔄 尝试重试...")
+                    import time
+                    time.sleep(5)
+                    continue
                 return None
         
         return None
