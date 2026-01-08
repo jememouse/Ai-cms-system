@@ -139,12 +139,18 @@ class WellCMSPublisher:
             # 填写正文 (UEditor) - 增强版
             html_content = article.get('html_content', '')
             
-            # 🚨 紧急修复：移除所有图片标签
-            # 原因：任何形式的图片似乎都会触发 UEditor 的截断 bug
-            if "<img" in html_content:
-                print("      ⚠️ 再次检测到图片，正在移除以确保文字完整...")
-                html_content = re.sub(r'<p[^>]*>\s*<img[^>]+>\s*</p>', '', html_content) 
-                html_content = re.sub(r'<img[^>]+>', '', html_content)
+            # 🚨 关键修复：移除 4字节字符 (Emoji)
+            # 原因：MySQL utf8 编码不支持 Emoji，会导致保存时从 Emoji 处被截断
+            # 匹配所有 Unicode 代理对 (Surrogate Pairs) 和非 BMP 字符
+            try:
+                # 过滤掉所有 ord > 65535 的字符
+                html_content = "".join(c for c in html_content if ord(c) <= 65535)
+                print("      🛡️ 已过滤 4字节字符 (Emoji) 以防截断")
+            except Exception as e:
+                print(f"      ⚠️ 字符过滤异常: {e}")
+
+            # 恢复图片功能 (之前误判为图片导致截断，实际是 Emoji)
+            # 这里的图片 URL 已经在 Step 2 被转义过 &amp; 了，安全。
             
             # 多次尝试注入内容
             injection_successful = False
