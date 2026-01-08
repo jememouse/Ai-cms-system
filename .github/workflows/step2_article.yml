@@ -29,7 +29,7 @@ jobs:
 
     - name: Run Step2 - AI 文章生成 (${{ matrix.category }})
       env:
-        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        # 使用国内 DeepSeek 直连 API (注意: GitHub Actions 在美国，可能有网络延迟)
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
