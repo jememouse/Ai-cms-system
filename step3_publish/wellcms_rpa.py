@@ -136,51 +136,99 @@ class WellCMSPublisher:
                 }""", tags)
             time.sleep(0.5)
             
-            # 填写正文 (UEditor)
+            # 填写正文 (UEditor) - 增强版，确保内容完整注入
             html_content = article.get('html_content', '')
-            self.page.evaluate("""(content) => {
-                // 尝试 UMeditor
-                if (typeof UM !== 'undefined') {
-                    try { UM.getEditor('message').setContent(content); return; } catch(e) {}
-                }
-                // 尝试 UEditor
-                if (typeof UE !== 'undefined') {
-                    try { UE.getEditor('message').setContent(content); return; } catch(e) {}
-                }
-                // 降级到 textarea
-                const el = document.querySelector('#message');
-                if (el) el.value = content;
-            }""", html_content)
+            
+            # 等待编辑器完全加载
+            time.sleep(3)
+            
+            # 多次尝试注入内容
+            for attempt in range(3):
+                try:
+                    inject_success = self.page.evaluate("""(content) => {
+                        // 尝试 UMeditor
+                        if (typeof UM !== 'undefined') {
+                            try {
+                                var editor = UM.getEditor('message');
+                                if (editor) {
+                                    editor.setContent(content);
+                                    return true;
+                                }
+                            } catch(e) { console.log('UM error:', e); }
+                        }
+                        // 尝试 UEditor
+                        if (typeof UE !== 'undefined') {
+                            try {
+                                var editor = UE.getEditor('message');
+                                if (editor) {
+                                    editor.setContent(content);
+                                    return true;
+                                }
+                            } catch(e) { console.log('UE error:', e); }
+                        }
+                        // 降级到 textarea
+                        var el = document.querySelector('#message');
+                        if (el) {
+                            el.value = content;
+                            return true;
+                        }
+                        // 尝试 iframe 方式
+                        var iframe = document.querySelector('.edui-editor-iframeholder iframe');
+                        if (iframe && iframe.contentDocument) {
+                            iframe.contentDocument.body.innerHTML = content;
+                            return true;
+                        }
+                        return false;
+                    }""", html_content)
+                    
+                    if inject_success:
+                        print(f"      📝 内容注入成功 (尝试 {attempt + 1})")
+                        break
+                    else:
+                        print(f"      ⚠️ 内容注入失败，重试 {attempt + 1}/3...")
+                        time.sleep(2)
+                except Exception as e:
+                    print(f"      ⚠️ 注入异常: {e}")
+                    time.sleep(2)
+            
             time.sleep(2)
             
             # 点击提交
-            self.page.evaluate("""() => {
-                document.getElementById('submit').click();
-            }""")
-            time.sleep(10)
+            # 点击提交并等待跳转
+            try:
+                # 使用 page.click 替代 evaluate，更容易等待导航
+                with self.page.expect_navigation(timeout=15000):
+                    self.page.click('#submit')
+            except Exception as e:
+                print(f"      ⚠️ 等待跳转超时或失败，尝试根据当前 URL 判断: {e}")
             
+            # 捕获 URL
+            current_url = self.page.url
             print(f"   ✅ 文章发布成功: {article.get('title', '')}")
-            return True
+            print(f"   🔗 链接: {current_url}")
+            
+            return True, current_url
             
         except Exception as e:
             print(f"   ❌ 发布失败: {e}")
-            return False
+            return False, ""
     
-    def publish(self, article: Dict) -> bool:
+    def publish(self, article: Dict) -> Tuple[bool, str]:
         """
         发布文章到 WellCMS (同步)
+        Returns: (success, url)
         """
         try:
             self._init_browser()
             
             if not self._login():
-                return False
+                return False, ""
             
             return self._publish_article(article)
             
         finally:
             self._close_browser()
             
-    def publish_sync(self, article: Dict) -> bool:
+    def publish_sync(self, article: Dict) -> Tuple[bool, str]:
         """兼容旧接口"""
         return self.publish(article)

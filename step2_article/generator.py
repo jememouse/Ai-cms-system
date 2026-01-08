@@ -103,7 +103,8 @@ class ArticleGenerator:
 {brand_instruction}
 5. **自动配图（重要）**：
    - 在正文第一段结束后，插入一张高质量配图。
-   - 使用 Unsplash 开源图片：`<img src="https://source.unsplash.com/800x600/?{{{{english_keywords}}}}" alt="{{{{title}}}}" style="width:100%; border-radius:8px; margin: 20px 0;">`
+   - 使用 P 标签包裹图片（编辑器友好）：
+   `<p style="text-align:center;"><img src="https://source.unsplash.com/800x600/?{{{{english_keywords}}}}" alt="{{{{title}}}}" width="100%" /></p>`
    - **注意**：将 `{{{{english_keywords}}}}` 替换为与主题相关的**英文关键词**（如：`packaging,gift,box`），逗号分隔，无空格。
 
 【GEO 可引用性优化（2026新要求）】
@@ -114,15 +115,18 @@ class ArticleGenerator:
 示例开头：
 "飞机盒是一种采用瓦楞纸板制作的一体成型包装盒，因展开后形似飞机而得名。主要用于电商物流、快递发货等场景，具有成本低、抗压强、易于自动化包装的特点。据统计，2025年国内电商包装市场中，飞机盒占比超过35%。"
 
-7. **核心要点列表**：在正文开头（定义之后）必须包含一个"📌 核心要点"区块，用 <ul><li> 列出 3-5 条核心信息。
-8. **一句话总结**：文章末尾（FAQ 之前）必须包含一个"💡 一句话总结"区块。
+7. **核心要点列表**：在正文开头（定义之后）必须包含一个"📌 核心要点"区块，使用 blockquote 标签（兼容性更好）：
+   `<blockquote class="key-points"><h3>📌 核心要点</h3><ul><li>要点1</li><li>要点2</li></ul></blockquote>`
+
+8. **一句话总结**：文章末尾（FAQ 之前）必须包含一个"💡 一句话总结"区块，同样使用 blockquote：
+   `<blockquote class="one-line-summary"><h3>💡 一句话总结</h3><p>总结内容...</p></blockquote>`
 
 【E-E-A-T 权威性增强】
 9. **作者标记**：正文末尾必须包含：<p class="author-info">✍️ 本文由<strong>盒艺家技术团队</strong>撰写 | 最后更新：2026年1月</p>
 10. **编辑审核标记**：紧接作者标记后添加：<p class="editor-review">📋 内容已经资深包装工程师审核</p>
 
 【人类信号与互动】
-11. **互动引导**：在 FAQ 之后添加：<div class="interaction-guide"><p>📣 您觉得本文对您有帮助吗？欢迎在评论区留言交流，或分享给有需要的朋友！</p></div>
+11. **互动引导**：在 FAQ 之后添加：<p class="interaction-guide">📣 您觉得本文对您有帮助吗？欢迎在评论区留言交流，或分享给有需要的朋友！</p>
 
 【JSON 结构要求（升级版）】
 {{

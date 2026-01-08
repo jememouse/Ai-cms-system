@@ -232,16 +232,22 @@ def run(config_file: str = None):
                 
                 # RPA 发布
                 print("      📤 正在发布...")
-                published = publisher.publish_sync(article)
+                success, url_link = publisher.publish_sync(article)
                 
-                if not published:
+                if not success:
                     print("      ⚠️ 发布失败")
                     total_fail += 1
                     continue
                 
-                # 更新飞书状态
-                if client.update_record(record["record_id"], {"Status": config.STATUS_PUBLISHED}):
+                # 更新飞书状态和链接
+                update_fields = {"Status": config.STATUS_PUBLISHED}
+                if url_link:
+                    update_fields["URL"] = url_link
+                    
+                if client.update_record(record["record_id"], update_fields):
                     print(f"      ✅ 已发布 -> Published")
+                    if url_link:
+                        print(f"      🔗 链接已保存: {url_link}")
                     total_success += 1
                     stats.record_published()  # 记录发布成功
                 
