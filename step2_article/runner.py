@@ -104,7 +104,10 @@ def run(max_articles: int = None):
             if category_text in stats:
                 stats[category_text] += 1
         
-        time.sleep(0.1)  # 减少等待时间，加速生成 (API 支持高并发)
+        import random
+        wait = random.uniform(2, 4)
+        print(f"   ⏳ 等待 {wait:.1f} 秒...")
+        time.sleep(wait)  # 2-4秒随机等待
     
     print("\n" + "=" * 50)
     print(f"📊 节点2完成! 总计生成 {success_count}/{len(all_records)} 篇文章")
