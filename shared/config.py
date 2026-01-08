@@ -19,7 +19,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 if OPENROUTER_API_KEY:
     LLM_API_KEY = OPENROUTER_API_KEY
     LLM_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-    LLM_MODEL = "deepseek/deepseek-chat"  # OpenRouter 的模型名称
+    LLM_MODEL = "google/gemini-2.0-flash-exp:free"  # Google Gemini 免费模型
 else:
     LLM_API_KEY = DEEPSEEK_API_KEY
     LLM_API_URL = "https://api.deepseek.com/v1/chat/completions"

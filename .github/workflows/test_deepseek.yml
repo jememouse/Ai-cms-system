@@ -21,7 +21,7 @@ jobs:
           -H "HTTP-Referer: https://heyijiapack.com" \
           -H "X-Title: HeYiJia Test" \
           -d '{
-            "model": "deepseek/deepseek-chat",
+            "model": "google/gemini-2.0-flash-exp:free",
             "messages": [{"role": "user", "content": "Say OK"}],
             "max_tokens": 10,
             "stream": false
