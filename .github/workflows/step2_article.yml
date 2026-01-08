@@ -2,8 +2,8 @@ name: Step2 - AI 文章生成
 
 on:
   schedule:
-    # 北京时间 00:00, 04:00 (凌晨时段，间隔4小时避免并行) -> UTC 16:00, 20:00 (前一天)
-    - cron: '0 16,20 * * *'
+    # 北京时间 00:10 -> UTC 16:10 (前一天)
+    - cron: '10 16 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
         FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
-        MAX_GENERATE_PER_CATEGORY: '34'
+        MAX_GENERATE_PER_CATEGORY: '1000'  # 处理所有 Ready 记录
         TARGET_CATEGORY: ${{ matrix.category }}
         TZ: 'Asia/Shanghai'
       run: |
