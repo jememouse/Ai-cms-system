@@ -139,11 +139,13 @@ class WellCMSPublisher:
             # 填写正文 (UEditor) - 增强版
             html_content = article.get('html_content', '')
             
-            # 🚨 热修复：转义 URL 中的 & 符号（针对 Pollinations）
-            # 原因：UEditor 解析未转义的 & 会导致内容截断
-            if "pollinations.ai" in html_content and "&" in html_content:
-                html_content = html_content.replace("&", "&amp;")
-                
+            # 🚨 紧急修复：移除所有图片标签
+            # 原因：任何形式的图片似乎都会触发 UEditor 的截断 bug
+            if "<img" in html_content:
+                print("      ⚠️ 再次检测到图片，正在移除以确保文字完整...")
+                html_content = re.sub(r'<p[^>]*>\s*<img[^>]+>\s*</p>', '', html_content) 
+                html_content = re.sub(r'<img[^>]+>', '', html_content)
+            
             # 多次尝试注入内容
             injection_successful = False
             for attempt in range(3):
