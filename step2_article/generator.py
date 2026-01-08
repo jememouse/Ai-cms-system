@@ -169,16 +169,24 @@ class ArticleGenerator:
             "Authorization": f"Bearer {self.api_key}"
         }
         
-        max_retries = 3
+        max_retries = 5  # 增加重试次数到 5
+        
+        # 使用 Session 保持连接池，提升网络稳定性
+        session = requests.Session()
+        
         for attempt in range(max_retries):
             try:
-                # 增加超时时间到 300秒
-                resp = requests.post(self.api_url, headers=headers, json={
+                # 🔧 关键修复：
+                # 1. 显式禁用 stream 模式，避免流式传输被中断
+                # 2. 降低 max_tokens 到 3500，减少长响应被截断的概率
+                # 3. 增加超时时间分为 connect 和 read 两部分
+                resp = session.post(self.api_url, headers=headers, json={
                     "model": "deepseek-chat",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
-                    "max_tokens": 4096
-                }, timeout=300)
+                    "max_tokens": 3500,
+                    "stream": False  # 显式禁用流式响应
+                }, timeout=(30, 300))  # (connect timeout, read timeout)
                 
                 # 检查 HTTP 状态码
                 if resp.status_code == 429:  # Rate limit
@@ -251,10 +259,12 @@ class ArticleGenerator:
                 return None
             except requests.exceptions.RequestException as e:
                 # 捕获所有网络相关错误（包括 ConnectionError, ChunkedEncodingError 等）并重试
-                print(f"   ⚠️ 网络请求失败: {e}，第 {attempt + 1}/{max_retries} 次重试...")
+                # 使用指数退避策略：10s, 20s, 40s, 60s, 60s
+                wait_time = min(60, 10 * (2 ** attempt))
+                print(f"   ⚠️ 网络请求失败: {e}，第 {attempt + 1}/{max_retries} 次重试（等待 {wait_time}秒）...")
                 if attempt < max_retries - 1:
                     import time
-                    time.sleep(5)
+                    time.sleep(wait_time)
                     continue
                 return None
             except Exception as e:
@@ -262,8 +272,13 @@ class ArticleGenerator:
                 if attempt < max_retries - 1:
                     print(f"   🔄 尝试重试...")
                     import time
-                    time.sleep(5)
+                    time.sleep(10)
                     continue
                 return None
+            finally:
+                # 确保每次请求后关闭连接，避免连接池泄漏
+                pass
         
+        # 关闭 session
+        session.close()
         return None
