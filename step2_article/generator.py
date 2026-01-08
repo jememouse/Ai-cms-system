@@ -102,10 +102,10 @@ class ArticleGenerator:
 4. **GEO (Generative Engine) 结构化**：正文中**必须包含 1 个 HTML 表格**（例如：不同材质成本对比、纸盒 vs 胶盒优劣势对比）。
 {brand_instruction}
 5. **自动配图（重要）**：
-   - 在正文第一段结束后，插入一张高质量配图。
-   - 使用 P 标签包裹图片（编辑器友好）：
-   `<p style="text-align:center;"><img src="https://source.unsplash.com/800x600/?{{{{english_keywords}}}}" alt="{{{{title}}}}" width="100%" /></p>`
-   - **注意**：将 `{{{{english_keywords}}}}` 替换为与主题相关的**英文关键词**（如：`packaging,gift,box`），逗号分隔，无空格。
+   - 在正文第一段结束后，插入一张 AI 生成的配图。
+   - 使用 Pollinations.ai 服务：
+   `<p style="text-align:center;"><img src="https://image.pollinations.ai/prompt/{{{{english_keywords}}}}?width=800&height=600&nologo=true" alt="{{{{title}}}}" width="100%" /></p>`
+   - **注意**：将 `{{{{english_keywords}}}}` 替换为与主题相关的**英文关键词**（如：`high quality packaging box, industrial`），逗号分隔。
 
 【GEO 可引用性优化（2026新要求）】
 6. **定义式开头**：文章第一段必须用"XX是一种...，主要用于..."的格式给出清晰定义，便于 AI 搜索引擎直接摘录。

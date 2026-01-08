@@ -136,11 +136,8 @@ class WellCMSPublisher:
                 }""", tags)
             time.sleep(0.5)
             
-            # 填写正文 (UEditor) - 增强版，确保内容完整注入
+            # 填写正文 (UEditor) - 增强版
             html_content = article.get('html_content', '')
-            
-            # 等待编辑器完全加载
-            time.sleep(3)
             
             # 多次尝试注入内容
             for attempt in range(3):
