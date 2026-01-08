@@ -207,6 +207,27 @@ class ArticleGenerator:
                 article = json.loads(content)
                 article["category_id"] = category_id
                 
+                # -------------------------------------------------------------------
+                # 🛡️ 强制后处理：修复 Pollinations 图片 URL 的转义问题
+                # 即使 Prompt 要求转义，LLM 也经常返回未转义的 HTML，导致 check_content 失败
+                # -------------------------------------------------------------------
+                if "html_content" in article:
+                    import re
+                    def escape_pollinations_url(match):
+                        url_part = match.group(1)
+                        # 将所有未被转义的 & 替换为 &amp; (排除已存在的 &amp;)
+                        # Negative lookahead (?!amp;) 确保不重复转义
+                        escaped = re.sub(r'&(?!amp;)', '&amp;', url_part)
+                        return f'src="{escaped}"'
+                    
+                    # 仅针对 Pollinations 的 src 属性进行修复
+                    article["html_content"] = re.sub(
+                        r'src="([^"]*pollinations\.ai[^"]*)"', 
+                        escape_pollinations_url, 
+                        article["html_content"]
+                    )
+                # -------------------------------------------------------------------
+
                 print(f"   ✅ 文章生成成功: {article.get('title', '无标题')}")
                 return article
                 
