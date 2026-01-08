@@ -144,49 +144,68 @@ class WellCMSPublisher:
             if "pollinations.ai" in html_content and "&" in html_content:
                 html_content = html_content.replace("&", "&amp;")
                 
-            # 等待编辑器完全加载
+            # 多次尝试注入内容
+            injection_successful = False
             for attempt in range(3):
                 try:
-                    inject_success = self.page.evaluate("""(content) => {
-                        // 尝试 UMeditor
+                    # 尝试注入
+                    inject_success = False
+                    
+                    # 方案 1: 标准 API 注入 (并在注入后读取验证)
+                    result_len = self.page.evaluate("""(content) => {
+                        var editor = null;
                         if (typeof UM !== 'undefined') {
-                            try {
-                                var editor = UM.getEditor('message');
-                                if (editor) {
-                                    editor.setContent(content);
-                                    return true;
-                                }
-                            } catch(e) { console.log('UM error:', e); }
+                            editor = UM.getEditor('message');
+                        } else if (typeof UE !== 'undefined') {
+                            editor = UE.getEditor('message');
                         }
-                        // 尝试 UEditor
-                        if (typeof UE !== 'undefined') {
-                            try {
-                                var editor = UE.getEditor('message');
-                                if (editor) {
-                                    editor.setContent(content);
-                                    return true;
-                                }
-                            } catch(e) { console.log('UE error:', e); }
+                        
+                        if (editor) {
+                            editor.setContent(content);
+                            return editor.getContent().length; // 返回注入后的长度
                         }
-                        // 降级到 textarea
-                        var el = document.querySelector('#message');
-                        if (el) {
-                            el.value = content;
-                            return true;
-                        }
-                        // 尝试 iframe 方式
-                        var iframe = document.querySelector('.edui-editor-iframeholder iframe');
-                        if (iframe && iframe.contentDocument) {
-                            iframe.contentDocument.body.innerHTML = content;
-                            return true;
-                        }
-                        return false;
+                        return -1;
                     }""", html_content)
                     
+                    # 验证注入结果
+                    if result_len > len(html_content) * 0.5: # 允许少许差异（HTML格式化），但不能太短
+                        print(f"      📝 内容注入成功 (长度: {result_len}/{len(html_content)})")
+                        inject_success = True
+                    elif result_len != -1:
+                        print(f"      ⚠️ 内容注入疑似截断 (长度差异大: {result_len}/{len(html_content)})，尝试备用方案...")
+                        # 只有当 API 注入失败或截断时，才走下面的 fallback
+                    
+                    # 方案 2: 备用 - Frame 直接注入 (如果标准 API 失败)
+                    if not inject_success:
+                        # 查找编辑器 iframe
+                        frames = self.page.frames
+                        target_frame = None
+                        for frame in frames:
+                            if "ueditor" in frame.name or "message" in frame.name:
+                                target_frame = frame
+                                break
+                        
+                        if target_frame:
+                            # 直接写入 iframe body
+                            target_frame.evaluate(f"document.body.innerHTML = `{html_content.replace('`', '\`')}`")
+                            # 同步回 textarea (尝试触发编辑器的 sync)
+                            self.page.evaluate("""() => {
+                                if (typeof UM !== 'undefined') UM.getEditor('message').sync();
+                                if (typeof UE !== 'undefined') UE.getEditor('message').sync();
+                            }""")
+                            print("      📝 使用 iframe 直接注入 (Force Mode)")
+                            inject_success = True
+                    
+                    # 方案 3: Textarea 兜底 (Source Mode)
+                    if not inject_success:
+                         self.page.fill('textarea[name="message"]', html_content)
+                         print("      📝 使用 Textarea 注入")
+                         inject_success = True
+
                     if inject_success:
-                        print(f"      📝 内容注入成功 (尝试 {attempt + 1})")
+                        time.sleep(2) # 注入后等待渲染
+                        injection_successful = True
                         break
-                    else:
                         print(f"      ⚠️ 内容注入失败，重试 {attempt + 1}/3...")
                         time.sleep(2)
                 except Exception as e:
