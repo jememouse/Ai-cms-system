@@ -17,8 +17,14 @@ class ArticleGenerator:
     
     def __init__(self):
         self.api_key = config.DEEPSEEK_API_KEY
-        self.api_url = config.DEEPSEEK_API_URL
+        # 如果配置了代理，优先使用代理 URL（用于 GitHub Actions 等境外环境）
+        self.api_url = config.DEEPSEEK_PROXY_URL or config.DEEPSEEK_API_URL
+        self.proxy_key = config.DEEPSEEK_PROXY_KEY
         self._load_brand_config()
+        
+        # 日志输出当前使用的 API 端点
+        if config.DEEPSEEK_PROXY_URL:
+            print(f"   🌐 使用代理: {self.api_url[:50]}...")
     
     def _load_brand_config(self):
         """加载品牌配置"""
@@ -168,6 +174,10 @@ class ArticleGenerator:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
+        
+        # 如果使用代理，添加代理验证密钥
+        if self.proxy_key:
+            headers["X-Proxy-Key"] = self.proxy_key
         
         max_retries = 5  # 增加重试次数到 5
         

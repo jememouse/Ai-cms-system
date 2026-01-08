@@ -14,6 +14,10 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
+# DeepSeek 代理配置（可选，用于 GitHub Actions 等境外环境）
+DEEPSEEK_PROXY_URL = os.getenv("DEEPSEEK_PROXY_URL", "")  # Cloudflare Worker URL
+DEEPSEEK_PROXY_KEY = os.getenv("DEEPSEEK_PROXY_KEY", "")  # 代理验证密钥
+
 # 飞书配置
 FEISHU_APP_ID = os.getenv("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.getenv("FEISHU_APP_SECRET", "")
