@@ -9,11 +9,6 @@ on:
 jobs:
   step2-article:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        category: ["专业知识", "行业资讯", "产品介绍"]
-      max-parallel: 1  # 🔧 串行执行，避免并发导致网络拥塞
-      fail-fast: false
     
     steps:
     - name: Checkout code
@@ -27,16 +22,15 @@ jobs:
     - name: Install dependencies
       run: uv sync
 
-    - name: Run Step2 - AI 文章生成 (${{ matrix.category }})
+    - name: Run Step2 - AI 文章生成 (按时间顺序处理所有文章)
       env:
-        # 使用国内 DeepSeek 直连 API (注意: GitHub Actions 在美国，可能有网络延迟)
+        # 使用国内 DeepSeek 直连 API
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
         FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         MAX_GENERATE_PER_CATEGORY: '1000'  # 处理所有 Ready 记录
-        TARGET_CATEGORY: ${{ matrix.category }}
         TZ: 'Asia/Shanghai'
       run: |
         uv run python -m step2_article.runner
