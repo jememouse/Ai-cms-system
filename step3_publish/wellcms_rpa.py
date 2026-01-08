@@ -8,7 +8,7 @@ import os
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from typing import Dict, Optional
+from typing import Dict, Tuple, Optional
 from playwright.sync_api import sync_playwright, Page, Browser
 from shared import config
 
