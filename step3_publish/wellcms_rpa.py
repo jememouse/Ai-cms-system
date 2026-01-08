@@ -83,12 +83,12 @@ class WellCMSPublisher:
             print(f"   ❌ 登录失败: {e}")
             return False
     
-    def _publish_article(self, article: Dict) -> bool:
+    def _publish_article(self, article: Dict) -> Tuple[bool, str]:
         """发布文章"""
         try:
             # 导航到发布页面
-            self.page.goto(self.post_url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(3)
+            self.page.goto(f"{config.CMS_URL}/admin/thread-create.html", timeout=60000, wait_until="networkidle")
+            time.sleep(2)
             
             # 填写标题
             self.page.fill('#subject', article.get('title', ''))
