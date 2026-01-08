@@ -7,24 +7,26 @@ jobs:
   test-api:
     runs-on: ubuntu-latest
     steps:
-    - name: Test DeepSeek API
+    - name: Test OpenRouter API (via DeepSeek)
       env:
-        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       run: |
-        echo "🔍 测试 DeepSeek API 连通性..."
+        echo "🔍 测试 OpenRouter API 连通性..."
         echo "时间: $(TZ=Asia/Shanghai date)"
         
         # 发送一个极简请求
         response=$(curl -s -w "\n%{http_code}" --max-time 120 \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
+          -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+          -H "HTTP-Referer: https://heyijiapack.com" \
+          -H "X-Title: HeYiJia Test" \
           -d '{
-            "model": "deepseek-chat",
+            "model": "deepseek/deepseek-chat",
             "messages": [{"role": "user", "content": "Say OK"}],
             "max_tokens": 10,
             "stream": false
           }' \
-          https://api.deepseek.com/v1/chat/completions)
+          https://openrouter.ai/api/v1/chat/completions)
         
         http_code=$(echo "$response" | tail -n1)
         body=$(echo "$response" | sed '$d')
@@ -35,9 +37,10 @@ jobs:
         
         if [ "$http_code" = "200" ]; then
           echo ""
-          echo "✅ DeepSeek API 连接正常!"
+          echo "✅ OpenRouter API 连接正常!"
         else
           echo ""
-          echo "❌ DeepSeek API 异常!"
+          echo "❌ OpenRouter API 异常!"
           exit 1
         fi
+

@@ -16,15 +16,16 @@ class ArticleGenerator:
     """AI 文章生成器"""
     
     def __init__(self):
-        self.api_key = config.DEEPSEEK_API_KEY
-        # 如果配置了代理，优先使用代理 URL（用于 GitHub Actions 等境外环境）
-        self.api_url = config.DEEPSEEK_PROXY_URL or config.DEEPSEEK_API_URL
-        self.proxy_key = config.DEEPSEEK_PROXY_KEY
+        self.api_key = config.LLM_API_KEY
+        self.api_url = config.LLM_API_URL
+        self.model = config.LLM_MODEL
         self._load_brand_config()
         
-        # 日志输出当前使用的 API 端点
-        if config.DEEPSEEK_PROXY_URL:
-            print(f"   🌐 使用代理: {self.api_url[:50]}...")
+        # 打印使用的 API 端点
+        if "openrouter" in self.api_url:
+            print("   🌐 使用 OpenRouter API")
+        else:
+            print("   🔗 使用 DeepSeek 直连 API")
     
     def _load_brand_config(self):
         """加载品牌配置"""
@@ -175,9 +176,10 @@ class ArticleGenerator:
             "Authorization": f"Bearer {self.api_key}"
         }
         
-        # 如果使用代理，添加代理验证密钥
-        if self.proxy_key:
-            headers["X-Proxy-Key"] = self.proxy_key
+        # OpenRouter 需要额外的 headers
+        if "openrouter" in self.api_url:
+            headers["HTTP-Referer"] = "https://heyijiapack.com"
+            headers["X-Title"] = "HeYiJia Article Generator"
         
         max_retries = 5  # 增加重试次数到 5
         
@@ -191,7 +193,7 @@ class ArticleGenerator:
                 # 2. 降低 max_tokens 到 3500，减少长响应被截断的概率
                 # 3. 增加超时时间分为 connect 和 read 两部分
                 resp = session.post(self.api_url, headers=headers, json={
-                    "model": "deepseek-chat",
+                    "model": self.model,  # 使用配置的模型名称
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
                     "max_tokens": 3500,

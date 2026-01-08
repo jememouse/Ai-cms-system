@@ -29,9 +29,8 @@ jobs:
 
     - name: Run Step2 - AI 文章生成 (${{ matrix.category }})
       env:
+        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        DEEPSEEK_PROXY_URL: ${{ secrets.DEEPSEEK_PROXY_URL }}  # 可选：Cloudflare Worker 代理
-        DEEPSEEK_PROXY_KEY: ${{ secrets.DEEPSEEK_PROXY_KEY }}  # 可选：代理验证密钥
         FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
         FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}

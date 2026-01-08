@@ -10,13 +10,20 @@ load_dotenv()
 # 项目根目录
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# DeepSeek API
+# LLM API 配置 (支持 OpenRouter 和 DeepSeek)
+# 优先使用 OpenRouter，如果没有配置则回退到 DeepSeek
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
-# DeepSeek 代理配置（可选，用于 GitHub Actions 等境外环境）
-DEEPSEEK_PROXY_URL = os.getenv("DEEPSEEK_PROXY_URL", "")  # Cloudflare Worker URL
-DEEPSEEK_PROXY_KEY = os.getenv("DEEPSEEK_PROXY_KEY", "")  # 代理验证密钥
+# 根据可用的 API Key 选择端点
+if OPENROUTER_API_KEY:
+    LLM_API_KEY = OPENROUTER_API_KEY
+    LLM_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+    LLM_MODEL = "deepseek/deepseek-chat"  # OpenRouter 的模型名称
+else:
+    LLM_API_KEY = DEEPSEEK_API_KEY
+    LLM_API_URL = "https://api.deepseek.com/v1/chat/completions"
+    LLM_MODEL = "deepseek-chat"  # DeepSeek 原生模型名称
 
 # 飞书配置
 FEISHU_APP_ID = os.getenv("FEISHU_APP_ID", "")
