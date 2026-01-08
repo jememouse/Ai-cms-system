@@ -139,7 +139,12 @@ class WellCMSPublisher:
             # 填写正文 (UEditor) - 增强版
             html_content = article.get('html_content', '')
             
-            # 多次尝试注入内容
+            # 🚨 热修复：转义 URL 中的 & 符号（针对 Pollinations）
+            # 原因：UEditor 解析未转义的 & 会导致内容截断
+            if "pollinations.ai" in html_content and "&" in html_content:
+                html_content = html_content.replace("&", "&amp;")
+                
+            # 等待编辑器完全加载
             for attempt in range(3):
                 try:
                     inject_success = self.page.evaluate("""(content) => {

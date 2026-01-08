@@ -104,7 +104,7 @@ class ArticleGenerator:
 5. **自动配图（重要）**：
    - 在正文第一段结束后，插入一张 AI 生成的配图。
    - 使用 Pollinations.ai 服务：
-   `<p style="text-align:center;"><img src="https://image.pollinations.ai/prompt/{{{{english_keywords}}}}?width=800&height=600&nologo=true" alt="{{{{title}}}}" width="100%" /></p>`
+   `<p style="text-align:center;"><img src="https://image.pollinations.ai/prompt/{{{{english_keywords}}}}?width=800&amp;height=600&amp;nologo=true" alt="{{{{title}}}}" width="100%" /></p>`
    - **注意**：将 `{{{{english_keywords}}}}` 替换为与主题相关的**英文关键词**（如：`high quality packaging box, industrial`），逗号分隔。
 
 【GEO 可引用性优化（2026新要求）】
