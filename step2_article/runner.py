@@ -76,6 +76,13 @@ def run(max_per_category: int = None):
         schema_faq_str = json_lib.dumps(article.get("schema_faq", []), ensure_ascii=False) if article.get("schema_faq") else ""
         key_points_str = json_lib.dumps(article.get("key_points", []), ensure_ascii=False) if article.get("key_points") else ""
         
+        # Tags 可能是列表或字符串，统一转为逗号分隔的字符串
+        tags_raw = article.get("tags", "")
+        if isinstance(tags_raw, list):
+            tags_str = ", ".join(str(t) for t in tags_raw)
+        else:
+            tags_str = str(tags_raw) if tags_raw else ""
+        
         fields = {
             "Status": config.STATUS_PENDING,  # 节点2完成: Pending
             "Title": article.get("title", ""),
@@ -83,7 +90,7 @@ def run(max_per_category: int = None):
             "摘要": article.get("summary", ""),
             "关键词": article.get("keywords", ""),
             "描述": article.get("description", ""),
-            "Tags": article.get("tags", ""),
+            "Tags": tags_str,  # 已转换为字符串
             # 新增字段 (GEO 优化) - 已转换为字符串
             "Schema_FAQ": schema_faq_str,
             "One_Line_Summary": article.get("one_line_summary", ""),
