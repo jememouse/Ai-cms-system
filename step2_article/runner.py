@@ -1,12 +1,13 @@
 # step2_article/runner.py
 """
 节点2 执行器: 从飞书读取 Ready -> AI 生成文章 -> 更新为 Pending
-按创建时间顺序处理（先进先出）
+按分类轮询处理 (Round-Robin)，确保各分类均衡生成
 """
 import sys
 import os
 import time
 from datetime import datetime
+from itertools import zip_longest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared.feishu_client import FeishuClient
@@ -25,24 +26,47 @@ def run(max_articles: int = None):
         max_articles = config.MAX_GENERATE_PER_CATEGORY
     
     print("\n" + "=" * 50)
-    print("✍️  节点2: AI 文章生成")
+    print("✍️  节点2: AI 文章生成 (分类均衡模式)")
     print("=" * 50 + "\n")
     
     client = FeishuClient()
     generator = ArticleGenerator()
     
-    # 获取所有 Ready 记录（不按分类筛选，按时间顺序）
-    all_records = client.fetch_records_by_status(
-        status=config.STATUS_READY,
-        category=None,  # 不按分类筛选
-        limit=max_articles
-    )
+    # 1. 分别获取各个分类的 Ready 记录
+    records_by_category = {}
+    total_records_count = 0
     
-    if not all_records:
-        print("⚠️ 没有待处理的 Ready 记录")
+    # 分类列表：专业知识、行业资讯、产品介绍
+    categories = list(config.CATEGORY_MAP.keys())
+    
+    print("📋 正在按分类获取记录...")
+    for category in categories:
+        records = client.fetch_records_by_status(
+            status=config.STATUS_READY,
+            category=category,
+            limit=max_articles  # 每个分类获取这么多，确保足够
+        )
+        records_by_category[category] = records
+        count = len(records)
+        print(f"   - {category}: {count} 条")
+        total_records_count += count
+    
+    if total_records_count == 0:
+        print("\n⚠️ 没有待处理的 Ready 记录")
         return
     
-    print(f"\n📝 共获取 {len(all_records)} 条待生成文章（按时间顺序处理）\n")
+    # 2. Round-Robin 合并列表
+    # 例如：[A1, A2], [B1, B2], [C1] -> [A1, B1, C1, A2, B2]
+    all_records = []
+    # 获取所有分类的记录列表
+    lists = [records_by_category[cat] for cat in categories]
+    # zip_longest 会把短的列表补 None，我们需要过滤掉 None
+    for items in zip_longest(*lists):
+        for item in items:
+            if item is not None:
+                all_records.append(item)
+    
+    print(f"\n📝 共获取 {len(all_records)} 条待生成文章（已按分类交替排序）\n")
     
     success_count = 0
     stats = {cat: 0 for cat in config.CATEGORY_MAP.keys()}
