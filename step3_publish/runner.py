@@ -253,8 +253,10 @@ def run(config_file: str = None):
                 
                 # 间隔等待
                 if idx < len(records) - 1:
-                    print(f"      ⏳ 等待 {interval_min} 分钟...")
-                    time.sleep(interval_sec)
+                    import random
+                    wait_sec = random.uniform(10, 20)
+                    print(f"      ⏳ 等待 {wait_sec:.1f} 秒...")
+                    time.sleep(wait_sec)
     
     # 记录失败数
     if total_fail > 0:
