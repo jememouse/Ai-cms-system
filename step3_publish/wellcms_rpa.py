@@ -102,6 +102,58 @@ class WellCMSPublisher:
             
             time.sleep(1)
             
+            # -------------------------------------------------------------------
+            # 🖼️ 封面图处理 (修复列表页无图问题)
+            # -------------------------------------------------------------------
+            html_content = article.get('html_content', '')
+            import re
+            img_match = re.search(r'src="([^"]+)"', html_content)
+            if img_match:
+                img_url = img_match.group(1)
+                img_url = img_url.replace('&amp;', '&') # 还原用于下载
+                print(f"      🖼️ 发现封面图: {img_url[:50]}...")
+                
+                try:
+                    # 下载图片
+                    import requests
+                    import tempfile
+                    
+                    # 使用临时文件
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                        try:
+                            headers = {
+                                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
+                            }
+                            resp = requests.get(img_url, headers=headers, timeout=10)
+                            if resp.status_code == 200:
+                                tmp.write(resp.content)
+                                tmp.flush()
+                                tmp_path = tmp.name
+                                
+                                # 上传到缩略图输入框
+                                # Selector: input element inside the label with class img_1 or data-assoc
+                                # Based on HTML dump: <input type="file" multiple="multiple" data-assoc="img_1">
+                                file_input = self.page.query_selector('input[data-assoc="img_1"]')
+                                if file_input:
+                                    file_input.set_input_files(tmp_path)
+                                    print("      📤 封面图上传中...")
+                                    time.sleep(3) # 等待上传完成
+                                else:
+                                    print("      ⚠️ 未找到封面图上传框")
+                            else:
+                                print(f"      ⚠️ 封面图下载失败: {resp.status_code}")
+                        except Exception as e:
+                            print(f"      ⚠️ 封面图处理异常: {e}")
+                        finally:
+                            # 清理临时文件
+                            try:
+                                os.unlink(tmp_path)
+                            except:
+                                pass
+                except Exception as e:
+                     print(f"      ⚠️ 封面图逻辑错误: {e}")
+            # -------------------------------------------------------------------
+            
             # 填写 SEO 字段
             self.page.evaluate("""(data) => {
                 const brief = document.querySelector('#brief');

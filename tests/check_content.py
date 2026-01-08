@@ -27,13 +27,23 @@ if records:
     print("📋 内容结构检查")
     print("=" * 50)
     checks = [
-        ("核心要点", "📌" in html_content or "核心要点" in html_content),
+        ("核心要点", "核心要点" in html_content or "key-points" in html_content),
         ("FAQ 区块", "FAQ" in html_content or "常见问题" in html_content),
-        ("一句话总结", "💡" in html_content or "一句话总结" in html_content),
+        ("一句话总结", "一句话总结" in html_content or "one-line-summary" in html_content),
         ("表格", "<table" in html_content),
         ("作者标记", "author-info" in html_content or "盒艺家技术团队" in html_content),
-        ("图片", "<img" in html_content),
+        ("Pollinations配图", "pollinations.ai" in html_content),
+        ("URL转义检查 (&amp;)", "&amp;" in html_content and "pollinations.ai" in html_content),
     ]
+    
+    # 提取图片标签进行详细展示
+    import re
+    imgs = re.findall(r'<img[^>]+>', html_content)
+    if imgs:
+        print("\n🖼️ 检测到的图片标签:")
+        for img in imgs:
+            print(f"  {img}")
+            
     for name, present in checks:
         status = "✅" if present else "❌"
         print(f"{status} {name}")
