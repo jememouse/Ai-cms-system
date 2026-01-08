@@ -87,7 +87,7 @@ class WellCMSPublisher:
         """发布文章"""
         try:
             # 导航到发布页面
-            self.page.goto(f"{config.CMS_URL}/admin/thread-create.html", timeout=60000, wait_until="networkidle")
+            self.page.goto(self.post_url, timeout=60000, wait_until="networkidle")
             time.sleep(2)
             
             # 填写标题
