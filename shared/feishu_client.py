@@ -183,6 +183,8 @@ class FeishuClient:
                     return self.update_record(record_id, fields, retry=False)
             
             print(f"   ❌ 更新失败: {error_msg}")
+            if "TextFieldConvFail" in str(error_msg):
+                print(f"   🐛 Debug Payload: {fields}")
             return False
         except Exception as e:
             print(f"   ⚠️ 更新网络错误: {e}")
