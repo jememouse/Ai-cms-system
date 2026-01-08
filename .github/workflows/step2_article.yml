@@ -2,8 +2,8 @@ name: Step2 - AI 文章生成
 
 on:
   schedule:
-    # 北京时间 00:10 -> UTC 16:10 (前一天)
-    - cron: '10 16 * * *'
+    # 北京时间 02:10 -> UTC 18:10 (前一天)
+    - cron: '10 18 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
