@@ -27,6 +27,33 @@ class SEOGenerator:
         self.config = self._load_json(CONFIG_FILE)
         self.db = self.config.get('database', {})
         self.generated_titles = set()
+        # 加载历史标题用于去重
+        self.history_titles = self._load_history_titles()
+        
+    def _load_history_titles(self):
+        """加载历史生成的标题，用于去重"""
+        history = set()
+        # 从输出文件加载
+        if os.path.exists(OUTPUT_FILE):
+            try:
+                with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    for item in data:
+                        if item.get('Topic'):
+                            history.add(item['Topic'])
+            except:
+                pass
+        print(f"   📚 加载 {len(history)} 条历史标题用于去重")
+        return history
+    
+    def _is_similar_title(self, new_title, threshold=0.7):
+        """检查标题是否与历史标题过于相似"""
+        new_words = set(new_title)
+        for old_title in self.history_titles:
+            old_words = set(old_title)
+            if len(new_words & old_words) / max(len(new_words | old_words), 1) > threshold:
+                return True
+        return False
 
     def _load_json(self, path):
         if not os.path.exists(path):
@@ -64,14 +91,13 @@ class SEOGenerator:
         
         结合角度参考：{angle}
         
-        核心要求：
-        1. **品牌植入规则（重要）**：
-           - **大部分标题（3-4 个）不要提及"盒艺家"**，应该是纯 SEO 内容标题，自然吸引搜索流量。
-           - **仅当话题涉及以下场景时，可以在 1-2 个标题中植入"盒艺家"**：
-             - 找工厂、找供应商、推荐厂家
-             - 定制加工、打样需求
-             - 避坑指南、选厂建议
-           - 植入方式要自然，如"盒艺家源头厂推荐"、"找盒艺家定制"等。
+        【核心要求】
+        1. **品牌植入规则（重要调整）**：
+           - **绝大部分标题（5-6 个）不要提及"盒艺家"**，应该是纯 SEO 内容标题，自然吸引搜索流量。
+           - **最多只能有 1 个标题植入"盒艺家"**，且仅限于以下场景：
+             - 明确的找厂需求（如"哪家好"、"推荐厂家"）
+           - 如果话题与找厂无关，则 6 个标题全部为纯内容标题，不植入任何品牌。
+           - 原则：**内容为王，品牌隐身**，通过优质内容吸引流量而非硬推品牌。
         2. **竞品屏蔽（非常重要）**：绝对**不要**出现除"盒艺家"以外的任何其他包装厂、印刷厂或竞品平台的名称。
         3. **字数限制**：必须控制在 20 个字以内！短小精悍！
         4. **关键词**：必须包含我们的核心产品词（如飞机盒、礼盒等）。
@@ -80,11 +106,40 @@ class SEOGenerator:
         7. **可选分类**：【专业知识】、【行业资讯】、【产品介绍】。
         8. **年份要求（重要）**：如果标题涉及年份，必须使用当前年份 **2026年**，绝对不要使用 2025、2024 等过时年份。
         
+        【GEO 可引用性优化（2026新要求）】
+        9. **搜索意图适配**：标题需匹配以下搜索意图之一：
+           - **信息型**：如"XX是什么"、"XX有哪些类型"、"XX怎么选"
+           - **商业型**：如"XX多少钱"、"XX哪家好"、"XX厂家推荐"
+           - **导航型**：如"XX定制流程"、"XX在线报价"
+        10. **疑问句式优先**：至少 2 个标题使用疑问句（如"？"结尾），更易被 AI 搜索引擎摘录为答案。
+        11. **数字型标题**：至少 1 个标题包含具体数字（如"5种"、"3个步骤"、"10元起"）。
+        12. **长尾关键词**：必须包含地域词或场景词（如"广州"、"电商专用"、"春节礼盒"）。
+        
+        【竞品词黑名单（严禁出现）】
+        包你好、派派盒子、包装宝、一呼百盒、吉印通、万印网、阿里巴巴1688、天猫、京东、拼多多
+        
+        【高质量标题示例（Few-shot）】
+        热点："春节年货消费趋势"
+        示例输出：
+        [
+            {{"title": "2026年春节礼盒定制避坑指南", "category": "专业知识", "intent": "信息型"}},
+            {{"title": "广州年货礼盒多少钱一个？", "category": "行业资讯", "intent": "商业型"}},
+            {{"title": "找盒艺家定制年货礼盒3天出货", "category": "产品介绍", "intent": "导航型"}}
+        ]
+        
+        热点："电商包装破损投诉"
+        示例输出：
+        [
+            {{"title": "电商飞机盒防破损的5个技巧", "category": "专业知识", "intent": "信息型"}},
+            {{"title": "抗压飞机盒怎么选不踩坑？", "category": "行业资讯", "intent": "商业型"}},
+            {{"title": "江浙沪抗压飞机盒源头厂批发", "category": "产品介绍", "intent": "导航型"}}
+        ]
+        
         请严格返回 JSON 格式列表：
         [
-            {{"title": "标题1", "category": "专业知识"}},
-            {{"title": "标题2", "category": "行业资讯"}},
-            {{"title": "标题3", "category": "产品介绍"}}
+            {{"title": "标题1", "category": "专业知识", "intent": "信息型"}},
+            {{"title": "标题2", "category": "行业资讯", "intent": "商业型"}},
+            {{"title": "标题3", "category": "产品介绍", "intent": "导航型"}}
             ...
         ]
         
@@ -100,19 +155,42 @@ class SEOGenerator:
             "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
         }
         
-        try:
-            resp = requests.post(DEEPSEEK_API_URL, headers=headers, json={
-                "model": "deepseek-chat",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.8
-            }, timeout=60)
-            
-            content = resp.json()["choices"][0]["message"]["content"]
-            content = content.replace("```json", "").replace("```", "").strip()
-            return json.loads(content)
-        except Exception as e:
-            print(f"   ⚠️ 生成失败: {e}")
-            return []
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = requests.post(DEEPSEEK_API_URL, headers=headers, json={
+                    "model": "deepseek-chat",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.8
+                }, timeout=60)
+                
+                # 限流处理
+                if resp.status_code == 429:
+                    wait_time = (attempt + 1) * 5
+                    print(f"   ⏳ API 限流，等待 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
+                    continue
+                
+                if resp.status_code != 200:
+                    print(f"   ⚠️ API 返回状态码: {resp.status_code}")
+                    if attempt < max_retries - 1:
+                        time.sleep(3)
+                        continue
+                    return []
+                
+                content = resp.json()["choices"][0]["message"]["content"]
+                content = content.replace("```json", "").replace("```", "").strip()
+                return json.loads(content)
+            except json.JSONDecodeError as e:
+                print(f"   ⚠️ JSON 解析失败: {e}")
+                return []
+            except Exception as e:
+                print(f"   ⚠️ 生成失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(3)
+                    continue
+                return []
+        return []
 
     def generate(self):
         print("⚙️  开始基于热点生成内容...")

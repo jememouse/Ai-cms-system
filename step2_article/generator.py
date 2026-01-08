@@ -50,10 +50,10 @@ class ArticleGenerator:
 4. **标准引用**：**必须引用至少1个**相关标准（如：ISO 12647 色彩标准、GB/T 6543 纸箱国标、G7认证、FSC森林认证等），展现权威性。
 """
 
-        # 决定是否植入品牌（20% 概率植入，80% 概率纯科普）
+        # 决定是否植入品牌（5% 概率植入，95% 概率纯科普）
+        # 降低品牌植入比例，专注内容 SEO/GEO 效果
         import random
-        # 种子设为 None 确保随机，或者用 hash(topic) 保证同一标题结果固定？用随机即可
-        is_marketing_article = random.random() < 0.2
+        is_marketing_article = random.random() < 0.05
         
         if is_marketing_article:
             brand_instruction = f"""
@@ -74,8 +74,22 @@ class ArticleGenerator:
         # 材质库
         materials = self.brand_config.get('database', {}).get('materials', [])
         materials_str = "、".join(materials[:10]) # 取前10个避免过长
+        
+        # 专业术语库（动态注入）
+        tech_terms = self.brand_config.get('database', {}).get('tech_terms', [])
+        tech_terms_str = "、".join(tech_terms[:15]) if tech_terms else "陷印、出血位、专色、四色印刷、UV、覆膜、压纹、烫金、模切、糊盒"
 
         prompt = f"""你是一位拥有10年经验的 B2B 包装行业内容营销专家，精通 SEO（搜索引擎优化）和 GEO（生成式引擎优化）。
+
+【品牌语调（必须贯穿全文）】
+- **专业但不晦涩**：用行业术语展现专业度，同时用通俗语言解释
+- **实用为王**：每段都要有可操作的建议或数据
+- **客观中立**：站在行业专家角度分析，避免推销腔调
+- **数据说话**：优先用具体数字、参数、对比来说明观点
+
+【专业术语库（适当使用）】
+{tech_terms_str}
+
 请为主题 "{topic}"（分类：{category}）撰写一篇高转化率的深度行业文章。
 
 {tech_requirements}
@@ -89,28 +103,56 @@ class ArticleGenerator:
 {brand_instruction}
 5. **自动配图（重要）**：
    - 在正文第一段结束后，插入一张高质量配图。
-   - 使用标签：`<img src="https://image.pollinations.ai/prompt/{{english_prompt}}?width=800&height=600&nologo=true" alt="{{title}}" style="width:100%; border-radius:8px; margin: 20px 0;">`
-   - **注意**：必须将 `{{english_prompt}}` 替换为当前主题的**英文描述**（例如：`luxury_gift_box_packaging_design_minimalist`），单词间用下划线连接。
+   - 使用 Unsplash 开源图片：`<img src="https://source.unsplash.com/800x600/?{{{{english_keywords}}}}" alt="{{{{title}}}}" style="width:100%; border-radius:8px; margin: 20px 0;">`
+   - **注意**：将 `{{{{english_keywords}}}}` 替换为与主题相关的**英文关键词**（如：`packaging,gift,box`），逗号分隔，无空格。
 
-【JSON 结构要求】
+【GEO 可引用性优化（2026新要求）】
+6. **定义式开头**：文章第一段必须用"XX是一种...，主要用于..."的格式给出清晰定义，便于 AI 搜索引擎直接摘录。
+
+【开头段落示例（Few-shot）】
+主题："飞机盒定制"
+示例开头：
+"飞机盒是一种采用瓦楞纸板制作的一体成型包装盒，因展开后形似飞机而得名。主要用于电商物流、快递发货等场景，具有成本低、抗压强、易于自动化包装的特点。据统计，2025年国内电商包装市场中，飞机盒占比超过35%。"
+
+7. **核心要点列表**：在正文开头（定义之后）必须包含一个"📌 核心要点"区块，用 <ul><li> 列出 3-5 条核心信息。
+8. **一句话总结**：文章末尾（FAQ 之前）必须包含一个"💡 一句话总结"区块。
+
+【E-E-A-T 权威性增强】
+9. **作者标记**：正文末尾必须包含：<p class="author-info">✍️ 本文由<strong>盒艺家技术团队</strong>撰写 | 最后更新：2026年1月</p>
+10. **编辑审核标记**：紧接作者标记后添加：<p class="editor-review">📋 内容已经资深包装工程师审核</p>
+
+【人类信号与互动】
+11. **互动引导**：在 FAQ 之后添加：<div class="interaction-guide"><p>📣 您觉得本文对您有帮助吗？欢迎在评论区留言交流，或分享给有需要的朋友！</p></div>
+
+【JSON 结构要求（升级版）】
 {{
   "title": "标题（15-20字，包含地域或痛点词，吸引点击）",
-  "html_content": "纯HTML正文。
-    - 使用 <h2> 小标题分段
-    - **必须包含一个 <table> 表格**
-    - 结尾必须包含 <h3>常见问题 (FAQ)</h3> 和 3 个相关的问答对（其中一个问答必须关联‘如何获取报价’，并回答‘使用我们的AI 3秒报价系统’）
-    - 重点词句加粗",
+  "html_content": "纯HTML正文（必须包含：定义式开头、核心要点列表、表格、一句话总结、FAQ、作者标记、编辑审核、互动引导）",
   "category_id": "{category_id}",
   "summary": "文章摘要（100字左右，包含核心痛点和解决方案）",
   "keywords": "5个SEO关键词，包含地域词（如：广州飞机盒定制）",
   "description": "SEO描述（120字以内，吸引点击）",
-  "tags": "3-5个标签"
+  "tags": "3-5个标签",
+  "schema_faq": [
+    {{"question": "问题1", "answer": "回答1"}},
+    {{"question": "问题2", "answer": "回答2"}},
+    {{"question": "问题3", "answer": "回答3"}}
+  ],
+  "one_line_summary": "一句话总结内容（30字以内）",
+  "key_points": ["核心要点1", "核心要点2", "核心要点3"]
 }}
 
-【写作禁忌】
-1. 严禁使用 "首先、其次、最后" 这种生硬的 AI 腔调。
-2. 严禁出现 "我们是最好的" 这种空洞口号，要用数据说话。
-3. 不要输出任何 JSON 之外的文字。无论如何只输出 JSON。
+【写作禁忌（严格执行）】
+1. **禁用 AI 腔调词汇**：严禁"首先、其次、最后、综上所述、总而言之、不难发现、众所周知"。
+2. **禁用空洞口号**：严禁"我们是最好的、行业领先、专业团队"等无数据支撑的表述。
+3. **禁用过度修饰**：避免"非常、极其、十分、特别"等过度副词。
+4. **禁用被动语态**：优先使用主动句式，如"选择A材质"而非"A材质被推荐使用"。
+5. **纯 JSON 输出**：不要输出任何 JSON 之外的文字。
+
+【SEO 内链策略】
+- 在正文中**自然插入 1-2 个内链**，格式：`<a href="https://heyijiapack.com/news/list-X.html">相关产品</a>`
+- 内链锚文本必须与目标页面相关（如"飞机盒定制"链接到飞机盒分类页）
+- 内链位置：建议放在核心要点段落或解决方案段落
 
 【年份要求】
 涉及年份统一使用 **2026年**。

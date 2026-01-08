@@ -71,6 +71,11 @@ def run(max_per_category: int = None):
             continue
         
         # 更新飞书
+        # 注意：飞书文本字段需要字符串，JSON 数组需转换
+        import json as json_lib
+        schema_faq_str = json_lib.dumps(article.get("schema_faq", []), ensure_ascii=False) if article.get("schema_faq") else ""
+        key_points_str = json_lib.dumps(article.get("key_points", []), ensure_ascii=False) if article.get("key_points") else ""
+        
         fields = {
             "Status": config.STATUS_PENDING,  # 节点2完成: Pending
             "Title": article.get("title", ""),
@@ -79,6 +84,10 @@ def run(max_per_category: int = None):
             "关键词": article.get("keywords", ""),
             "描述": article.get("description", ""),
             "Tags": article.get("tags", ""),
+            # 新增字段 (GEO 优化) - 已转换为字符串
+            "Schema_FAQ": schema_faq_str,
+            "One_Line_Summary": article.get("one_line_summary", ""),
+            "Key_Points": key_points_str,
         }
         
         if client.update_record(record["record_id"], fields):

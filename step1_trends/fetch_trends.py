@@ -28,6 +28,40 @@ KR36_HOT_URL = "https://36kr.com/newsflashes"
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRENDS_FILE = os.path.join(BASE_DIR, "trends_data.json")
 CONFIG_FILE = os.path.join(BASE_DIR, "box_artist_config.json")
+CACHE_FILE = os.path.join(BASE_DIR, ".cache", "trends_cache.json")
+CACHE_EXPIRY_HOURS = 4  # 缓存有效期
+
+def _load_cache():
+    """加载缓存数据"""
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    try:
+        with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def _save_cache(cache_data):
+    """保存缓存数据"""
+    os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
+    with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+
+def _get_cached(key):
+    """获取缓存，检查是否过期"""
+    cache = _load_cache()
+    if key in cache:
+        cached_time = datetime.fromisoformat(cache[key].get("time", "2000-01-01"))
+        if (datetime.now() - cached_time).total_seconds() < CACHE_EXPIRY_HOURS * 3600:
+            print(f"   📦 使用缓存: {key}")
+            return cache[key].get("data", [])
+    return None
+
+def _set_cached(key, data):
+    """设置缓存"""
+    cache = _load_cache()
+    cache[key] = {"time": datetime.now().isoformat(), "data": data}
+    _save_cache(cache)
 
 # 通用 Header
 HEADERS = {
@@ -160,6 +194,157 @@ def fetch_36kr_hot():
         print(f"   ❌ 失败: {e}")
         return []
 
+def fetch_zhihu_hot_questions(seed_words):
+    """抓取知乎热门问答 (高意图问答，适合 GEO 优化)"""
+    if not seed_words:
+        return []
+        
+    print(f"❓ 开始挖掘知乎问答（高意图需求）...")
+    questions = []
+    import random
+    # 随机选取 8 个种子词进行挖掘
+    target_seeds = random.sample(seed_words, min(8, len(seed_words)))
+    
+    for seed in target_seeds:
+        try:
+            # 知乎搜索 API (简化版，通过网页接口)
+            url = f"https://www.zhihu.com/api/v4/search_v3?t=general&q={seed}&offset=0&limit=5"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Referer": "https://www.zhihu.com/search"
+            }
+            resp = requests.get(url, headers=headers, timeout=8)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if "data" in data:
+                    for item in data["data"][:3]:  # 每个种子词取前3条
+                        obj = item.get("object", {})
+                        # 优先获取问题标题
+                        if item.get("type") == "search_result":
+                            title = obj.get("title", "") or obj.get("question", {}).get("title", "")
+                            if title and len(title) > 5:
+                                # 清理 HTML 标签
+                                clean_title = re.sub(r'<[^>]+>', '', title)
+                                questions.append(f"[知乎问答] {clean_title}")
+                    print(f"   -> '{seed}' 挖到: {min(3, len(data.get('data', [])))} 条")
+            
+            time.sleep(0.8)  # 知乎反爬严格，增加间隔
+        except Exception as e:
+            print(f"   ⚠️ 知乎挖掘 '{seed}' 失败: {e}")
+            
+    # 去重
+    questions = list(set(questions))
+    print(f"   -> 总计获取 {len(questions)} 个知乎高意图问答")
+    return questions
+
+def fetch_xiaohongshu_trends(seed_words):
+    """抓取小红书热门话题 (C端消费趋势，年轻群体偏好)"""
+    if not seed_words:
+        return []
+        
+    print(f"📕 开始挖掘小红书消费趋势...")
+    trends = []
+    import random
+    # 随机选取 6 个种子词
+    target_seeds = random.sample(seed_words, min(6, len(seed_words)))
+    
+    for seed in target_seeds:
+        try:
+            # 小红书搜索建议 API (公开接口)
+            url = f"https://edith.xiaohongshu.com/api/sns/web/v1/search/hot_list"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Referer": "https://www.xiaohongshu.com/"
+            }
+            resp = requests.get(url, headers=headers, timeout=8)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("success") and "data" in data:
+                    hot_list = data["data"].get("list", [])[:10]
+                    for item in hot_list:
+                        title = item.get("title", "")
+                        if title and any(kw in title for kw in ["包装", "礼盒", "送礼", "开箱", "好物"]):
+                            trends.append(f"[小红书] {title}")
+                    print(f"   -> 获取到 {len(hot_list)} 个热门话题")
+                    break  # 热榜只需请求一次
+            
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"   ⚠️ 小红书抓取失败: {e}")
+    
+    # 备用：基于种子词构造消费场景话题
+    consumption_scenes = [
+        "开箱体验", "送礼推荐", "高级感包装", "拆快递", 
+        "好物分享", "颜值包装", "精致生活"
+    ]
+    for seed in target_seeds[:3]:
+        for scene in random.sample(consumption_scenes, 2):
+            trends.append(f"[小红书] {seed}{scene}")
+    
+    trends = list(set(trends))
+    print(f"   -> 总计获取 {len(trends)} 个小红书趋势")
+    return trends
+
+def fetch_google_trends(seed_words):
+    """获取谷歌趋势数据 (海外市场洞察，跨境电商需求)"""
+    if not seed_words:
+        return []
+        
+    print(f"🌍 开始获取谷歌全球趋势...")
+    trends = []
+    
+    # 包装行业海外关键词
+    overseas_keywords = [
+        "custom packaging", "gift box wholesale", "mailer box",
+        "packaging design trends", "sustainable packaging",
+        "luxury packaging", "eco friendly packaging",
+        "packaging supplier", "corrugated box manufacturer"
+    ]
+    
+    for kw in overseas_keywords[:5]:
+        try:
+            # Google Trends 建议 API (简化版)
+            url = f"https://trends.google.com/trends/api/autocomplete/{kw.replace(' ', '%20')}?hl=en-US"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            }
+            resp = requests.get(url, headers=headers, timeout=8)
+            
+            if resp.status_code == 200:
+                # Google Trends 返回需要处理前缀
+                text = resp.text
+                if text.startswith(")]}'"):
+                    text = text[5:]
+                try:
+                    data = json.loads(text)
+                    if "default" in data and "topics" in data["default"]:
+                        for topic in data["default"]["topics"][:3]:
+                            title = topic.get("title", "")
+                            if title:
+                                trends.append(f"[谷歌趋势] {title}")
+                except:
+                    pass
+            
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"   ⚠️ 谷歌趋势 '{kw}' 获取失败: {e}")
+    
+    # 备用：预设海外热门话题
+    preset_trends = [
+        "[谷歌趋势] sustainable packaging solutions 2026",
+        "[谷歌趋势] custom mailer boxes for small business",
+        "[谷歌趋势] eco friendly packaging alternatives",
+        "[谷歌趋势] luxury gift box packaging design",
+        "[谷歌趋势] corrugated shipping boxes wholesale"
+    ]
+    trends.extend(preset_trends)
+    
+    trends = list(set(trends))
+    print(f"   -> 总计获取 {len(trends)} 个海外趋势")
+    return trends
+
 def fetch_baidu_suggestions(seed_words):
     """挖掘百度下拉推荐词 (精准搜索需求)"""
     if not seed_words:
@@ -265,15 +450,25 @@ def analyze_trends_with_ai(trends):
     我是一个做【包装印刷、礼盒定制、品牌设计】的工厂。
     请分析以下全网热点，**务必挑选出 33 个** 最适合写文章的话题（数量不足扣分）。
     
-    **筛选优先级（精准营销版）：**
-    1. **S级（必选）**：带有 `[搜索需求]` 标记的内容。以及**技术类长尾需求**（如：**印刷设备介绍/维修、行业标准解读、包装计算公式**）、**行业前沿趋势**（数字化、AI、出海）及**设计营销热点**（如：**国潮设计、品牌视觉升级、热门广告创意**）。
-    2. **A级（重点）**：能关联到“实体产品、礼品经济、消费行业（美妆/食品/电子）”的商业热点。例如：“某品牌联名礼盒”、“春节年货消费趋势”。
-    3. **B级（特定关联）**：能强行关联此行业标准的社会热点。例如：“环保政策（关联绿色包装）”、“快递新规（关联抗压纸箱）”。
-    4. **D级（坚决剔除）**：任何无法转化为“卖包装盒”的纯娱乐八卦、政治敏感、负面社会新闻。**宁缺毋滥，不要凑数。**
-    
-    **营销思考逻辑：**
-    - 看到“明星代言”，思考：他的粉丝会买同款应援礼盒吗？（是->选，否->弃）
-    - 看到“节日”，思考：商家需要提前备货礼盒包装吗？（是->选）
+    **筛选优先级（GEO 时代精准营销版 2026）：**
+    1. **S级（必选 - 高意图需求）**：
+       - 带有 `[搜索需求]` 或 `[1688采购]` 标记的内容（用户已有明确采购意向）
+       - **问答类话题**：如"XX怎么选"、"XX多少钱"、"XX哪家好"（适合 AI 搜索引擎摘录）
+       - **技术类长尾需求**：印刷设备介绍/维修、行业标准解读、包装计算公式
+       - **行业前沿趋势**：数字化、AI、出海、可持续包装
+    2. **A级（重点 - 商业关联）**：
+       - 能关联到"实体产品、礼品经济、消费行业（美妆/食品/电子）"的商业热点
+       - 带有明确场景的话题（如："春节礼盒"、"电商包装"、"外卖包装"）
+    3. **B级（特定关联）**：
+       - 能强行关联行业标准的社会热点（如："环保政策→绿色包装"、"快递新规→抗压纸箱"）
+    4. **D级（坚决剔除）**：
+       - 纯娱乐八卦、政治敏感、负面社会新闻
+       - 无法提供"实用价值"的话题（AI 搜索引擎不会推荐无价值内容）
+
+    **GEO 时代营销思考（新增）：**
+    - 看到"XX怎么选"，思考：这是高意图问答，AI 会优先推荐有清晰答案的文章 ✓
+    - 看到"XX多少钱"，思考：用户有采购意向，可以写价格科普+报价引导 ✓
+    - 看到纯热点事件，思考：能否转化为"实用教程"或"避坑指南"？能→选，否→弃
 
     热搜列表（已标记来源）：
     {trends_str}
@@ -281,10 +476,17 @@ def analyze_trends_with_ai(trends):
     对于每个挑选出的相关话题，请给出（请保留原始话题中的[来源]标记）：
     1. topic: 话题名称 (e.g. "[搜索需求] 包装定制哪家好")
     2. angle: 结合角度 (例如：分析事件中的礼品包装差异、热点人物带火的同款色系等)
+    3. content_type: 建议的内容形式，可选值：
+       - "问答科普"：适合"XX是什么"类话题
+       - "对比评测"：适合"XX vs XX"、"哪个好"类话题
+       - "教程指南"：适合"怎么做"、"如何"类话题
+       - "价格揭秘"：适合"多少钱"、"价格"类话题
+       - "趋势分析"：适合行业动态类话题
+    4. priority: 优先级 (S/A/B)
     
     请严格返回 JSON 格式列表：
     [
-        {{"topic": "话题名", "angle": "结合角度"}}
+        {{"topic": "话题名", "angle": "结合角度", "content_type": "问答科普", "priority": "S"}}
     ]
     不要返回 Markdown。
     """
@@ -338,6 +540,9 @@ def main():
     all_trends.extend(fetch_baidu_suggestions(mining_seeds))
     all_trends.extend(fetch_1688_suggestions(mining_seeds))
     all_trends.extend(fetch_taobao_suggestions(mining_seeds))
+    all_trends.extend(fetch_zhihu_hot_questions(mining_seeds))  # 知乎高意图问答
+    all_trends.extend(fetch_xiaohongshu_trends(mining_seeds))   # 小红书消费趋势
+    all_trends.extend(fetch_google_trends(mining_seeds))        # 谷歌海外趋势
     
     # 手动标记来源
     for t in fetch_baidu_hot():

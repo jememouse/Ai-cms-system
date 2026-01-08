@@ -19,6 +19,7 @@ FEISHU_APP_ID = os.getenv("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.getenv("FEISHU_APP_SECRET", "")
 FEISHU_BASE_ID = os.getenv("FEISHU_BASE_ID", "ROVGbzfTfaEGjosDkxHck65Cnmx")
 FEISHU_TABLE_ID = os.getenv("FEISHU_TABLE_ID", "tblxkLHxg9K3uHyp")
+FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "https://open.feishu.cn/open-apis/bot/v2/hook/009c15b4-fb99-4eaa-82a7-f1a190083bfc")
 
 # WellCMS 配置
 WELLCMS_USERNAME = os.getenv("WELLCMS_USERNAME", "product_manager")

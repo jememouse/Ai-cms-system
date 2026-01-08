@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared.feishu_client import FeishuClient
 from shared import config
+from shared import stats
 from .wellcms_rpa import WellCMSPublisher
 
 
@@ -108,9 +109,120 @@ def run(config_file: str = None):
                 print(f"\n   [{idx + 1}/{len(records)}] {title[:30]}...")
                 
                 # 准备文章数据
+                html_content = record.get("html_content", "")
+                
+                # === Schema 结构化数据注入 ===
+                schema_faq_raw = record.get("schema_faq", "")
+                schema_faq = []
+                
+                # 解析 schema_faq (可能是 JSON 字符串或列表)
+                if schema_faq_raw:
+                    if isinstance(schema_faq_raw, str):
+                        try:
+                            schema_faq = json.loads(schema_faq_raw)
+                        except json.JSONDecodeError:
+                            schema_faq = []
+                    elif isinstance(schema_faq_raw, list):
+                        schema_faq = schema_faq_raw
+                
+                if schema_faq and isinstance(schema_faq, list) and len(schema_faq) > 0:
+                    # 构建 FAQ Schema JSON-LD
+                    faq_schema = {
+                        "@context": "https://schema.org",
+                        "@type": "FAQPage",
+                        "mainEntity": [
+                            {
+                                "@type": "Question",
+                                "name": q.get("question", ""),
+                                "acceptedAnswer": {
+                                    "@type": "Answer",
+                                    "text": q.get("answer", "")
+                                }
+                            }
+                            for q in schema_faq if isinstance(q, dict) and q.get("question")
+                        ]
+                    }
+                    # 注入到 HTML 末尾
+                    schema_script = f'<script type="application/ld+json">{json.dumps(faq_schema, ensure_ascii=False)}</script>'
+                    html_content = html_content + "\n" + schema_script
+                    print("      📊 已注入 FAQ Schema")
+                
+                # === Article Schema 注入 ===
+                from datetime import datetime
+                article_schema = {
+                    "@context": "https://schema.org",
+                    "@type": "Article",
+                    "headline": title,
+                    "author": {
+                        "@type": "Organization",
+                        "name": "盒艺家技术团队",
+                        "url": "https://heyijiapack.com/"
+                    },
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": "盒艺家",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": "https://heyijiapack.com/logo.png"
+                        }
+                    },
+                    "datePublished": datetime.now().strftime("%Y-%m-%d"),
+                    "dateModified": datetime.now().strftime("%Y-%m-%d"),
+                    "description": record.get("description", "")[:160],
+                    "keywords": record.get("keywords", "")
+                }
+                article_schema_script = f'<script type="application/ld+json">{json.dumps(article_schema, ensure_ascii=False)}</script>'
+                html_content = html_content + "\n" + article_schema_script
+                print("      📰 已注入 Article Schema")
+                
+                # === 内容质量检测 ===
+                # 清理 HTML 标签获取纯文本
+                import re
+                plain_text = re.sub(r'<[^>]+>', '', html_content)
+                content_length = len(plain_text)
+                quality_issues = []
+                quality_score = 100  # 初始满分
+                
+                # 1. 字数检测
+                if content_length < 500:
+                    quality_issues.append(f"字数过少 ({content_length} 字)")
+                    quality_score -= 20
+                elif content_length < 800:
+                    quality_score -= 5
+                
+                # 2. 必填字段检测
+                if not record.get("keywords"):
+                    quality_issues.append("缺少关键词")
+                    quality_score -= 15
+                if not record.get("description"):
+                    quality_issues.append("缺少描述")
+                    quality_score -= 10
+                
+                # 3. 关键词密度检测
+                keywords_str = record.get("keywords", "")
+                if keywords_str:
+                    keywords_list = [kw.strip() for kw in keywords_str.replace("，", ",").split(",") if kw.strip()]
+                    keyword_counts = {}
+                    for kw in keywords_list[:3]:  # 检测前3个关键词
+                        count = plain_text.count(kw)
+                        keyword_counts[kw] = count
+                        if count == 0:
+                            quality_issues.append(f"关键词 '{kw}' 未出现")
+                            quality_score -= 5
+                        elif count < 2:
+                            quality_score -= 2
+                    if keyword_counts:
+                        print(f"      🔍 关键词密度: {keyword_counts}")
+                
+                # 输出质量结果
+                if quality_issues:
+                    print(f"      ⚠️ 质量提醒 (评分:{quality_score}): {', '.join(quality_issues)}")
+                else:
+                    print(f"      ✅ 质量检测通过 ({content_length} 字, 评分:{quality_score})")
+                
                 article = {
                     "title": title,
-                    "html_content": record.get("html_content", ""),
+                    "html_content": html_content,
                     "category_id": config.CATEGORY_MAP.get(category, "2"),
                     "summary": record.get("summary", ""),
                     "keywords": record.get("keywords", ""),
@@ -131,17 +243,33 @@ def run(config_file: str = None):
                 if client.update_record(record["record_id"], {"Status": config.STATUS_PUBLISHED}):
                     print(f"      ✅ 已发布 -> Published")
                     total_success += 1
+                    stats.record_published()  # 记录发布成功
                 
                 # 间隔等待
                 if idx < len(records) - 1:
                     print(f"      ⏳ 等待 {interval_min} 分钟...")
                     time.sleep(interval_sec)
     
+    # 记录失败数
+    if total_fail > 0:
+        stats.record_failed(total_fail)
+    
     print("\n" + "=" * 50)
     print(f"📊 节点3完成!")
     print(f"   ✅ 成功: {total_success}")
     print(f"   ❌ 失败: {total_fail}")
     print("=" * 50)
+    
+    # 打印统计汇总
+    stats.print_summary()
+    
+    # 发送飞书通知
+    if total_success > 0 or total_fail > 0:
+        notify_content = f"**发布结果**\n- ✅ 成功: {total_success} 篇\n- ❌ 失败: {total_fail} 篇\n- ⏰ 时间: {time.strftime('%Y-%m-%d %H:%M')}\n\n{stats.get_summary()}"
+        client.send_notification(
+            title="📤 CMS 发布任务完成",
+            content=notify_content
+        )
 
 
 if __name__ == "__main__":

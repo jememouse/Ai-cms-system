@@ -139,6 +139,10 @@ class FeishuClient:
                     "keywords": parse_text_field(fields.get("关键词", "")),
                     "description": parse_text_field(fields.get("描述", "")),
                     "tags": parse_text_field(fields.get("Tags", "")),
+                    # 新增字段 (GEO 优化) - 文本类型，存储 JSON 字符串
+                    "schema_faq": parse_text_field(fields.get("Schema_FAQ", "")),
+                    "one_line_summary": parse_text_field(fields.get("One_Line_Summary", "")),
+                    "key_points": parse_text_field(fields.get("Key_Points", "")),
                 })
             
             total = data.get("data", {}).get("total", 0)
@@ -203,4 +207,41 @@ class FeishuClient:
                 return False
         except Exception as e:
             print(f"   ⚠️ 上传网络错误: {e}")
+            return False
+    
+    def send_notification(self, title: str, content: str) -> bool:
+        """
+        发送飞书消息通知（使用 Webhook）
+        
+        Args:
+            title: 通知标题
+            content: 通知内容
+        """
+        webhook_url = getattr(config, 'FEISHU_WEBHOOK_URL', None)
+        if not webhook_url:
+            print("   ⚠️ 未配置 FEISHU_WEBHOOK_URL，跳过通知")
+            return False
+        
+        try:
+            payload = {
+                "msg_type": "interactive",
+                "card": {
+                    "header": {
+                        "title": {"tag": "plain_text", "content": title},
+                        "template": "blue"
+                    },
+                    "elements": [
+                        {"tag": "div", "text": {"tag": "lark_md", "content": content}}
+                    ]
+                }
+            }
+            resp = requests.post(webhook_url, json=payload, timeout=10)
+            if resp.status_code == 200:
+                print(f"   📨 飞书通知已发送: {title}")
+                return True
+            else:
+                print(f"   ⚠️ 飞书通知失败: {resp.text}")
+                return False
+        except Exception as e:
+            print(f"   ⚠️ 飞书通知异常: {e}")
             return False
