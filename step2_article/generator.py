@@ -237,11 +237,15 @@ class ArticleGenerator:
                 except json.JSONDecodeError as e:
                     # 如果还是失败，尝试更激进的修复
                     print(f"   ⚠️ JSON 解析失败: {e}")
-                    # 尝试使用 ast.literal_eval 作为备选（更宽容）
+                    print(f"   🐛 内容前200字符: {content[:200]}...")
+                    
+                    # 尝试使用 ast.literal_eval 作为备选（支持单引号）
                     try:
                         import ast
                         article = ast.literal_eval(content)
-                    except:
+                        print(f"   ✅ 使用 ast.literal_eval 成功解析")
+                    except Exception as ast_err:
+                        print(f"   ❌ ast.literal_eval 也失败: {ast_err}")
                         raise e  # 最终放弃，抛出原始错误
                 
                 article["category_id"] = category_id
