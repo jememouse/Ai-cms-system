@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         category: ["专业知识", "行业资讯", "产品介绍"]
+      max-parallel: 1  # 🔧 串行执行，避免并发导致网络拥塞
       fail-fast: false
     
     steps:
