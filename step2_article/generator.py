@@ -225,7 +225,25 @@ class ArticleGenerator:
                 if first_brace != -1 and last_brace > first_brace:
                     content = content[first_brace:last_brace + 1]
                 
-                article = json.loads(content)
+                # 尝试修复常见的 JSON 格式问题
+                import re
+                # 1. 移除尾随逗号 (如 {"a": 1,} -> {"a": 1})
+                content = re.sub(r',(\s*[}\]])', r'\1', content)
+                # 2. 修复字符串中的未转义换行符
+                content = re.sub(r'(?<!\\)\n', r'\\n', content)
+                
+                try:
+                    article = json.loads(content)
+                except json.JSONDecodeError as e:
+                    # 如果还是失败，尝试更激进的修复
+                    print(f"   ⚠️ JSON 解析失败: {e}")
+                    # 尝试使用 ast.literal_eval 作为备选（更宽容）
+                    try:
+                        import ast
+                        article = ast.literal_eval(content)
+                    except:
+                        raise e  # 最终放弃，抛出原始错误
+                
                 article["category_id"] = category_id
                 
                 # -------------------------------------------------------------------
