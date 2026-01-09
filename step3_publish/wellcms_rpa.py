@@ -124,8 +124,20 @@ class WellCMSPublisher:
                             headers = {
                                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
                             }
-                            resp = requests.get(img_url, headers=headers, timeout=10)
-                            if resp.status_code == 200:
+                            # 重试机制 (Pollinations.ai 响应较慢)
+                            resp = None
+                            for retry in range(3):
+                                try:
+                                    resp = requests.get(img_url, headers=headers, timeout=30)
+                                    if resp.status_code == 200:
+                                        break
+                                except requests.exceptions.Timeout:
+                                    if retry < 2:
+                                        print(f"      ⏳ 封面图下载超时，重试 {retry + 1}/3...")
+                                        time.sleep(2)
+                                    else:
+                                        raise
+                            if resp and resp.status_code == 200:
                                 tmp.write(resp.content)
                                 tmp.flush()
                                 tmp_path = tmp.name
