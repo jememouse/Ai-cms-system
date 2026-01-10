@@ -33,6 +33,95 @@ class ArticleGenerator:
         if os.path.exists(config.CONFIG_FILE):
             with open(config.CONFIG_FILE, 'r', encoding='utf-8') as f:
                 self.brand_config = json.load(f)
+
+    def _search_web(self, query: str) -> str:
+        """使用百度搜索实时信息 (Requests + Regex)"""
+        print(f"   🔍 [Baidu] 正在搜索实时信息: {query}...")
+        
+        # 仿照 fetch_trends.py 的 Headers
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Cookie": "SUB=_2AkMSb-1af8NxqwJRmP0SzGvmZY1yyA_EieKkA3HJJRMxHRl-yT9kqmsstRB6POKqfE_JzXqqfE_JzXqqfE_JzXqq; _zap=a1b2c3d4; d_c0=abcd1234;" 
+        }
+        
+        try:
+            url = "https://www.baidu.com/s"
+            params = {"wd": query, "rn": 5} # rn=5 取前5条
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            
+            if resp.status_code != 200:
+                print(f"   ⚠️ 百度搜索返回状态码: {resp.status_code}")
+                return ""
+            
+            html = resp.text
+            import re
+            
+            # 简单的正则提取 (针对百度 PC 网页版)
+            # 提取容器: <div class="result c-container ...">
+            # 这种提取比较脆弱，但为了不引入 beautifulsoup4 依赖，暂时使用正则尝试匹配标题和摘要
+            
+            # 清理 HTML 标签
+            def clean_html(text):
+                text = re.sub(r'<[^>]+>', '', text)
+                text = text.replace('&nbsp;', ' ').replace('&quot;', '"').replace('&lt;', '<').replace('&gt;', '>')
+                return text.strip()
+
+            results = []
+            
+            # 策略：分别匹配标题和摘要，然后组合
+            # 百度标题通常在 <h3 class="t">...</h3> 中
+            # 摘要通常在 <div class="c-abstract">...</div> 中
+            
+            # 简化版正则：直接匹配纯文本看起来像结果的部分
+            # 但正则太难写通用，我们尝试找关键特征
+            
+            # 策略：多模式匹配以提高兼容性
+            patterns = [
+                r'<h3 class="t"[^>]*>.*?<a[^>]*>(.*?)</a>',           # 经典 PC 版
+                r'<div class="c-title"[^>]*>.*?<a[^>]*>(.*?)</a>',    # 新版/移动版
+                r'"title":"(.*?)"',                                   # JSON 里的数据 (偶尔出现)
+                r'class="c-showurl"[^>]*>(.*?)<'                      # 备用：抓取显示 URL 附近的文本
+            ]
+            
+            clean_titles = []
+            seen_titles = set()
+            
+            for pat in patterns:
+                matches = re.findall(pat, html, re.DOTALL)
+                for m in matches:
+                    # 清理和去重
+                    t = clean_html(m)
+                    if t and len(t) > 5 and t not in seen_titles: # 过滤太短的垃圾字符
+                        clean_titles.append(t)
+                        seen_titles.add(t)
+            
+            # 如果还是空，尝试极其宽泛的匹配 (风险是匹配到广告，但 RAG 环境下有胜于无)
+            if not clean_titles:
+                raw_links = re.findall(r'<a[^>]+target="_blank"[^>]*>(.*?)</a>', html)
+                for t in raw_links:
+                    t = clean_html(t)
+                    if "百度" not in t and len(t) > 10 and t not in seen_titles:
+                        clean_titles.append(t)
+                        seen_titles.add(t)
+                
+            if not clean_titles:
+                print("   ⚠️ 未解析到搜索结果 (可能页面结构变更)")
+                return ""
+                
+            # 简单拼接前 3-5 条
+            context = []
+            for idx, title in enumerate(clean_titles[:5]):
+                # 由于提取摘要比较困难，我们这里只用标题，或者尝试提取上下文
+                # 为了 RAG 效果，只用标题可能不够，但在无法精确解析摘要时，标题也是高价值信息
+                context.append(f"{idx+1}. {title}")
+                
+            result_text = "\n".join(context)
+            print(f"   ✅ [Baidu] 获取到 {len(context)} 条信息")
+            return result_text
+            
+        except Exception as e:
+            print(f"   ⚠️ 百度搜索失败: {e}")
+            return ""
     
     def generate(self, topic: str, category: str) -> Optional[Dict]:
         """根据标题生成 SEO 文章"""
@@ -56,6 +145,30 @@ class ArticleGenerator:
 3. **材料科学**：深度解析材料属性（如：瓦楞楞型A/B/E区别、纸张克重与挺度关系）。
 4. **标准引用**：**必须引用至少1个**相关标准（如：ISO 12647 色彩标准、GB/T 6543 纸箱国标、G7认证、FSC森林认证等），展现权威性。
 """
+
+        # -------------------------------------------------------------------
+        # RAG: 实时搜索增强
+        # -------------------------------------------------------------------
+        search_context = ""
+        rag_instruction = ""
+        trigger_keywords = ["展会", "论坛", "峰会", "大赛", "价格", "行情", "新规", "政策", "趋势", "发布会", "多少钱", "怎么选"]
+        
+        # 只要是行业资讯，或者标题包含触发词，就执行搜索
+        is_rag_enabled = self.brand_config.get("enable_rag", True)
+        if is_rag_enabled and ("行业资讯" in category or any(k in topic for k in trigger_keywords)):
+            search_context = self._search_web(topic)
+            
+        if search_context:
+            rag_instruction = f"""
+【真实性增强 (RAG Context)】
+🔍 系统已为你搜索到以下关于 "{topic}" 的最新实时信息。
+请**务必基于以下事实**进行写作（特别是具体的日期、地点、价格、数据），**严禁编造**与搜索结果相悖的信息：
+
+{search_context}
+
+（请自然地将上述信息融入文章，不要直接复制粘贴）
+"""
+        # -------------------------------------------------------------------
 
         # 决定是否植入品牌（5% 概率植入，95% 概率纯科普）
         # 降低品牌植入比例，专注内容 SEO/GEO 效果
@@ -99,6 +212,7 @@ class ArticleGenerator:
 
 请为主题 "{topic}"（分类：{category}）撰写一篇高转化率的深度行业文章。
 
+{rag_instruction}
 {tech_requirements}
 【核心策略】
 1. **PAS 模型写作**：先指出客户痛点（Pain），再描述严重后果，最后给出解决方案（Solution）。

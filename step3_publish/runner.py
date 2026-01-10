@@ -243,6 +243,12 @@ def run(config_file: str = None):
                 update_fields = {"Status": config.STATUS_PUBLISHED}
                 if url_link:
                     update_fields["URL"] = url_link
+
+                # 记录发布时间 (独立字段)
+                from datetime import datetime
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                update_fields["发布时间"] = current_time
+                print(f"      ⏰ 发布时间已记录: {current_time}")
                     
                 if client.update_record(record["record_id"], update_fields):
                     print(f"      ✅ 已发布 -> Published")
