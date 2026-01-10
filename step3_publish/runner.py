@@ -307,6 +307,11 @@ def run(config_file: str = None):
                     wait_sec = random.uniform(10, 20)
                     print(f"      ⏳ 等待 {wait_sec:.1f} 秒...")
                     time.sleep(wait_sec)
+        
+        # 账号轮换等待
+        if acc_idx < len(accounts) - 1:
+            print(f"\n   ⏳ 账号 [{username}] 任务完成，休息 {interval_min} 分钟 ({interval_sec}秒)...")
+            time.sleep(interval_sec)
     
     # 记录失败数
     if total_fail > 0:
