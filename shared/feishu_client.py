@@ -143,6 +143,8 @@ class FeishuClient:
                     "schema_faq": parse_text_field(fields.get("Schema_FAQ", "")),
                     "one_line_summary": parse_text_field(fields.get("One_Line_Summary", "")),
                     "key_points": parse_text_field(fields.get("Key_Points", "")),
+                    "url": parse_text_field(fields.get("URL", "")),
+                    "published_at": parse_text_field(fields.get("发布时间", "")),
                 })
             
             total = data.get("data", {}).get("total", 0)
