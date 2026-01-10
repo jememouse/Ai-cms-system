@@ -321,53 +321,70 @@ class WellCMSPublisher:
             # 确保在列表页 (content-list)
             # 无论之前是在哪，强制去一次内容管理页，确保能找到刚发的文章
             list_url = f"{self.admin_url}?0=content&1=list"
-            try:
-                self.page.goto(list_url, wait_until="networkidle", timeout=30000)
-            except Exception as e:
-                print(f"      ⚠️ 跳转列表页超时: {e}")
-            
-            # 在列表中查找标题
-            # 策略 3 (Frame + FirstRow): 遍历所有 Frame 查找表格
+            # 重试机制提取 URL
+            max_retries = 3
             tid = None
             
-            try:
-                frames = self.page.frames
-                print(f"      👀 页面共有 {len(frames)} 个 Frame, 正在查找内容表格...")
-                
-                for frame in frames:
-                    # 尝试定位表格行
-                    # 宽松选择器: table tr (包含 data-tid 属性)
-                    rows = frame.locator("tr[data-tid]")
-                    count = rows.count()
+            for attempt in range(max_retries):
+                if attempt > 0:
+                     print(f"      🔄 尝试 {attempt + 1}/{max_retries}: 正在重试提取 TID...")
+
+                try:
+                    # 1. 强制刷新/跳转列表页
+                    self.page.goto(list_url, wait_until="networkidle", timeout=30000)
                     
-                    if count > 0:
-                        print(f"      ✅ 在 Frame '{frame.name}' 中找到 {count} 行数据")
-                        first_row = rows.first
-                        tid_attr = first_row.get_attribute("data-tid")
-                        if tid_attr:
-                            tid = tid_attr
-                            print(f"      ✅ [Strategy:Frame+FirstRow] 找到 TID: {tid}")
-                            break
+                    # 2. 显式等待表格加载 (尝试等待3秒)
+                    try:
+                         # 轮询检查是否有包含 data-tid 的行
+                         for _ in range(3):
+                             found = False
+                             for frame in self.page.frames:
+                                 if frame.locator("tr[data-tid]").count() > 0:
+                                     found = True
+                                     break
+                             if found: break
+                             time.sleep(1)
+                    except:
+                        pass
+
+                    # 3. 遍历提取
+                    frames = self.page.frames
+                    print(f"      👀 页面共有 {len(frames)} 个 Frame, 正在查找内容表格...")
                     
-                    # 备选: 有些旧版表格可能没有 data-tid，找链接
-                    # 查找包含 thread-tid 的链接 或 admin/index.php?...tid=
-                    links = frame.locator("a[href*='tid=']").all()
-                    if links:
-                        # 取第一个看起来像内容链接的
-                        for link in links[:3]: # 只看前几个
+                    for frame in frames:
+                        rows = frame.locator("tr[data-tid]")
+                        count = rows.count()
+                        
+                        if count > 0:
+                            first_row = rows.first
+                            tid_attr = first_row.get_attribute("data-tid")
+                            if tid_attr:
+                                tid = tid_attr
+                                print(f"      ✅ [Strategy:Frame+FirstRow] 找到 TID: {tid}")
+                                break
+                            
+                        # Fallback Link (兼容旧版/另一种渲染)
+                        links = frame.locator("a[href*='tid=']").all()
+                        for link in links[:5]:
                             href = link.get_attribute("href")
                             if href:
                                 import re
                                 match = re.search(r'tid=(\d+)', href)
                                 if match:
                                     tid = match.group(1)
-                                    print(f"      ✅ [Strategy:Frame+Link] 在 Frame '{frame.name}' 找到 TID: {tid}")
+                                    print(f"      ✅ [Strategy:Link] 找到 TID: {tid}")
                                     break
-                        if tid:
-                            break
-                            
-            except Exception as e:
-                print(f"      ⚠️ 查找 TID 失败: {e}")
+                        if tid: break
+                    
+                    if tid:
+                        break
+                    else:
+                         print("      ⚠️ 当前页面未找到 TID，等待后重试...")
+                         time.sleep(2)
+
+                except Exception as e:
+                    print(f"      ⚠️ 提取过程异常: {e}")
+                    time.sleep(2)
                 
             # 构造最终 URL
             if tid:
