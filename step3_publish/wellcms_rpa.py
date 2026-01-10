@@ -327,50 +327,55 @@ class WellCMSPublisher:
                 print(f"      ⚠️ 跳转列表页超时: {e}")
             
             # 在列表中查找标题
-            # 假设列表结构：<tr><td>...<a ...>Title</a>...</td>...</tr>
-            # 或者是 属性 data-tid
+            # 策略 3 (Frame + FirstRow): 遍历所有 Frame 查找表格
             tid = None
             
             try:
-                # 尝试查找包含标题的链接或文本
-                # 为了防止匹配到其他相似标题，最好是完全匹配或前缀匹配
-                # 这里的 selector 需要根据 WellCMS 后台实际结构调整
-                # 常见结构: <tr data-tid="123">...或者 <a href="...tid=123">Title</a>
+                frames = self.page.frames
+                print(f"      👀 页面共有 {len(frames)} 个 Frame, 正在查找内容表格...")
                 
-                # 策略 1: 查找链接文本等于标题的元素
-                row_link = self.page.get_by_text(article.get('title', ''), exact=False).first
-                if row_link:
-                    # 尝试从父级或链接本身提取 tid
-                    # 检查 href: ?0=content&1=update&fid=2&tid=1943
-                    href = row_link.get_attribute("href")
-                    if href and "tid=" in href:
-                         import re
-                         match = re.search(r'tid=(\d+)', href)
-                         if match:
-                             tid = match.group(1)
-                             print(f"      ✅ 通过 Link Href 找到 TID: {tid}")
+                for frame in frames:
+                    # 尝试定位表格行
+                    # 宽松选择器: table tr (包含 data-tid 属性)
+                    rows = frame.locator("tr[data-tid]")
+                    count = rows.count()
                     
-                    # 如果 link 没找到，尝试找 tr 的 data-tid (如果有)
-                    if not tid:
-                        # 向上找 tr
-                        row = row_link.locator("xpath=./ancestor::tr").first
-                        if row:
-                            tid_attr = row.get_attribute("data-tid")
-                            if tid_attr:
-                                tid = tid_attr
-                                print(f"      ✅ 通过 TR data-tid 找到 TID: {tid}")
-                
+                    if count > 0:
+                        print(f"      ✅ 在 Frame '{frame.name}' 中找到 {count} 行数据")
+                        first_row = rows.first
+                        tid_attr = first_row.get_attribute("data-tid")
+                        if tid_attr:
+                            tid = tid_attr
+                            print(f"      ✅ [Strategy:Frame+FirstRow] 找到 TID: {tid}")
+                            break
+                    
+                    # 备选: 有些旧版表格可能没有 data-tid，找链接
+                    # 查找包含 thread-tid 的链接 或 admin/index.php?...tid=
+                    links = frame.locator("a[href*='tid=']").all()
+                    if links:
+                        # 取第一个看起来像内容链接的
+                        for link in links[:3]: # 只看前几个
+                            href = link.get_attribute("href")
+                            if href:
+                                import re
+                                match = re.search(r'tid=(\d+)', href)
+                                if match:
+                                    tid = match.group(1)
+                                    print(f"      ✅ [Strategy:Frame+Link] 在 Frame '{frame.name}' 找到 TID: {tid}")
+                                    break
+                        if tid:
+                            break
+                            
             except Exception as e:
                 print(f"      ⚠️ 查找 TID 失败: {e}")
                 
             # 构造最终 URL
             if tid:
                 # 格式: https://heyijiapack.com/news/read-{tid}.html
-                # 注意: 之前用户有提到 /news/ 路径问题，这里硬编码为带 /news/ 的正确路径
                 current_url = f"https://heyijiapack.com/news/read-{tid}.html"
             else:
-                # 兜底: 还是原来的逻辑，但至少打印个警告
-                print("      ⚠️ 未能提取 TID，使用当前页面 URL (可能是后台地址)")
+                # 兜底
+                print("      ⚠️ 未能提取 TID (遍历所有 Frame 后)，使用当前页面 URL")
                 current_url = self.page.url
             
             print(f"   ✅ 文章发布成功: {article.get('title', '')}")

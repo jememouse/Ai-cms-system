@@ -49,7 +49,8 @@ def run():
         feishu_records.append({
             "Topic": item.get("Topic", ""),
             "大项分类": item.get("大项分类", "行业资讯"),
-            "Status": config.STATUS_READY  # 节点1完成: Ready
+            "Status": config.STATUS_READY,  # 节点1完成: Ready
+            "标题生成时间": item.get("created_at", "")
         })
     
     client = FeishuClient()

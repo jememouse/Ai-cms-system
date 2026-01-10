@@ -7,6 +7,7 @@ import os
 import requests
 import time
 import re
+from datetime import datetime
 from dotenv import load_dotenv
 
 # 加载 .env 环境变量
@@ -261,7 +262,8 @@ class SEOGenerator:
                         "Topic": title,
                         "大项分类": cat, # 经过清洗的单一分类
                         "Status": "Pending",
-                        "Source_Trend": trend['topic']
+                        "Source_Trend": trend['topic'],
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     })
             
             time.sleep(1)
