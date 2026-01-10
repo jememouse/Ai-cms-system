@@ -305,8 +305,74 @@ class WellCMSPublisher:
             except Exception as e:
                 print(f"      ⚠️ 等待跳转超时或失败，尝试根据当前 URL 判断: {e}")
             
-            # 捕获 URL
-            current_url = self.page.url
+            # -------------------------------------------------------------------
+            # 🔗 URL 修正逻辑 (修复 "Same Link" Bug)
+            # -------------------------------------------------------------------
+            # 原问题：发布后直接取 page.url，得到的是后台列表页地址
+            # 解决方案：
+            # 1. 提交后，自动跳转到列表页 (或手动跳转)
+            # 2. 在列表页根据标题找到对应的行
+            # 3. 提取 data-tid 或 href 中的 tid
+            # 4. 拼接前台 URL
+            
+            print("      🔍 正在解析文章真实 URL...")
+            time.sleep(2) # 等待列表页加载
+            
+            # 确保在列表页 (content-list)
+            # 无论之前是在哪，强制去一次内容管理页，确保能找到刚发的文章
+            list_url = f"{self.admin_url}?0=content&1=list"
+            try:
+                self.page.goto(list_url, wait_until="networkidle", timeout=30000)
+            except Exception as e:
+                print(f"      ⚠️ 跳转列表页超时: {e}")
+            
+            # 在列表中查找标题
+            # 假设列表结构：<tr><td>...<a ...>Title</a>...</td>...</tr>
+            # 或者是 属性 data-tid
+            tid = None
+            
+            try:
+                # 尝试查找包含标题的链接或文本
+                # 为了防止匹配到其他相似标题，最好是完全匹配或前缀匹配
+                # 这里的 selector 需要根据 WellCMS 后台实际结构调整
+                # 常见结构: <tr data-tid="123">...或者 <a href="...tid=123">Title</a>
+                
+                # 策略 1: 查找链接文本等于标题的元素
+                row_link = self.page.get_by_text(article.get('title', ''), exact=False).first
+                if row_link:
+                    # 尝试从父级或链接本身提取 tid
+                    # 检查 href: ?0=content&1=update&fid=2&tid=1943
+                    href = row_link.get_attribute("href")
+                    if href and "tid=" in href:
+                         import re
+                         match = re.search(r'tid=(\d+)', href)
+                         if match:
+                             tid = match.group(1)
+                             print(f"      ✅ 通过 Link Href 找到 TID: {tid}")
+                    
+                    # 如果 link 没找到，尝试找 tr 的 data-tid (如果有)
+                    if not tid:
+                        # 向上找 tr
+                        row = row_link.locator("xpath=./ancestor::tr").first
+                        if row:
+                            tid_attr = row.get_attribute("data-tid")
+                            if tid_attr:
+                                tid = tid_attr
+                                print(f"      ✅ 通过 TR data-tid 找到 TID: {tid}")
+                
+            except Exception as e:
+                print(f"      ⚠️ 查找 TID 失败: {e}")
+                
+            # 构造最终 URL
+            if tid:
+                # 格式: https://heyijiapack.com/news/read-{tid}.html
+                # 注意: 之前用户有提到 /news/ 路径问题，这里硬编码为带 /news/ 的正确路径
+                current_url = f"https://heyijiapack.com/news/read-{tid}.html"
+            else:
+                # 兜底: 还是原来的逻辑，但至少打印个警告
+                print("      ⚠️ 未能提取 TID，使用当前页面 URL (可能是后台地址)")
+                current_url = self.page.url
+            
             print(f"   ✅ 文章发布成功: {article.get('title', '')}")
             print(f"   🔗 链接: {current_url}")
             

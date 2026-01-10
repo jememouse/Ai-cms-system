@@ -38,6 +38,48 @@ def load_publish_config():
     print(f"⚠️ 未找到有效配置 (文件: {config.PUBLISH_CONFIG_FILE} 或 环境变量)")
     return None
 
+def _record_to_assets(article, url):
+    """
+    将已发布的文章记录到本地资产库，用于 SEO 内链
+    """
+    ASSETS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "published_assets.json")
+    
+    # 构造新记录
+    new_record = {
+        "title": article.get("title"),
+        "url": url,
+        "keywords": article.get("keywords"),
+        "category_id": article.get("category_id"),
+        "summary": article.get("summary"),
+        "published_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    try:
+        data = []
+        if os.path.exists(ASSETS_FILE):
+            with open(ASSETS_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    data = json.load(f)
+                except:
+                    data = []
+        
+        # 简单去重 (按 URL)
+        # 如果 URL 对应的记录已存在，更新它；否则追加
+        existing_idx = next((i for i, item in enumerate(data) if item.get("url") == url), -1)
+        if existing_idx >= 0:
+            data[existing_idx] = new_record
+        else:
+            data.append(new_record)
+            
+        with open(ASSETS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            
+        print(f"      📚 已收录至 SEO 资产库 ({len(data)} 篇)")
+        
+    except Exception as e:
+        print(f"      ⚠️ 资产库写入失败: {e}")
+
+
 
 def run(config_file: str = None):
     """
@@ -254,6 +296,8 @@ def run(config_file: str = None):
                     print(f"      ✅ 已发布 -> Published")
                     if url_link:
                         print(f"      🔗 链接已保存: {url_link}")
+                        # === SEO 闭环：记录到资产库 ===
+                        _record_to_assets(article, url_link)
                     total_success += 1
                     stats.record_published()  # 记录发布成功
                 

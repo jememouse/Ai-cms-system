@@ -214,7 +214,6 @@ def fetch_zhihu_hot_questions(seed_words):
                 "Referer": "https://www.zhihu.com/search"
             }
             resp = requests.get(url, headers=headers, timeout=8)
-            
             if resp.status_code == 200:
                 data = resp.json()
                 if "data" in data:
@@ -460,6 +459,7 @@ def analyze_trends_with_ai(trends):
        - 能关联到"实体产品、礼品经济、消费行业（美妆/食品/电子）"的商业热点
        - 带有明确场景的话题（如："春节礼盒"、"电商包装"、"外卖包装"）
        - **行业活动（新增重点）**：包装展会、设计大赛、高峰论坛、技术交流会（必须归类为'行业资讯'）
+       - **下游行业展会（S级商机）**：食品展、美博会、电子展、礼品展（需分析其对包装的新需求）
     3. **B级（特定关联）**：
        - 能强行关联行业标准的社会热点（如："环保政策→绿色包装"、"快递新规→抗压纸箱"）
     4. **D级（坚决剔除）**：

@@ -123,6 +123,61 @@ class ArticleGenerator:
             print(f"   ⚠️ 百度搜索失败: {e}")
             return ""
     
+    def _find_related_links(self, current_topic, limit=3):
+        """
+        从资产库中查找相关文章用于内链
+        简单的关键词匹配逻辑
+        """
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ASSETS_FILE = os.path.join(BASE_DIR, "published_assets.json")
+        if not os.path.exists(ASSETS_FILE):
+            return []
+            
+        try:
+            with open(ASSETS_FILE, 'r', encoding='utf-8') as f:
+                assets = json.load(f)
+                
+            if not assets:
+                return []
+                
+            # 简单的相关性打分
+            # 如果当前标题包含资产标题中的词，或者资产关键词包含在当前标题中
+            scored_assets = []
+            current_topic_set = set(current_topic)
+            
+            for item in assets:
+                score = 0
+                title = item.get("title", "")
+                keywords = item.get("keywords", "")
+                url = item.get("url", "")
+                
+                # 排除自己 (虽然 URL 未生成，但 Topic 不能完全一样)
+                if title == current_topic:
+                    continue
+                
+                # 标题重叠度 (简单的字符交集)
+                common_chars = set(title) & current_topic_set
+                score += len(common_chars)
+                
+                # 关键词匹配
+                if keywords:
+                    for kw in keywords.split(','):
+                        if kw.strip() and kw.strip() in current_topic:
+                            score += 3
+                
+                if score > 2: # 只保留有一定相关性的
+                    scored_assets.append((score, item))
+            
+            # 按分数降序
+            scored_assets.sort(key=lambda x: x[0], reverse=True)
+            
+            # 返回前 N 个
+            return [item[1] for item in scored_assets[:limit]]
+            
+        except Exception as e:
+            print(f"   ⚠️ 读取资产库失败: {e}")
+            return []
+
     def generate(self, topic: str, category: str) -> Optional[Dict]:
         """根据标题生成 SEO 文章"""
         category_id = config.CATEGORY_MAP.get(category, "2")
@@ -169,6 +224,21 @@ class ArticleGenerator:
 （请自然地将上述信息融入文章，不要直接复制粘贴）
 """
         # -------------------------------------------------------------------
+        # SEO: 智能内链增强
+        # -------------------------------------------------------------------
+        related_links = self._find_related_links(topic)
+        link_instruction = ""
+        if related_links:
+            links_text = "\n".join([f"- 《{item['title']}》: {item['url']}" for item in related_links])
+            link_instruction = f"""
+【SEO 内链优化 (Internal Linking)】
+请在文章正文的合适位置（如相关段落末尾、关键词解释时、或文末“延伸阅读”部分），**自然地**插入以下 1-2 个内链：
+{links_text}
+
+要求：
+1. 不要生硬堆砌，要作为补充阅读推荐给用户。
+2. 必须保留 HTML 链接格式 `<a href="URL">标题</a>`。
+"""
 
         # 决定是否植入品牌（5% 概率植入，95% 概率纯科普）
         # 降低品牌植入比例，专注内容 SEO/GEO 效果
@@ -188,7 +258,7 @@ class ArticleGenerator:
    - **本文必须是100%纯干货科普**，严禁提及“盒艺家”或任何具体品牌名。
    - 全文侧重于行业标准、工艺参数、设计趋势分析。
    - 即使在解决方案部分，也只能建议“寻找拥有数字化报价系统的现代化工厂”，而不要点名具体商家。
-   - 目标是建立中立、权威的行业专家形象，而非推销员形象。
+   - 原则：依靠极其专业的内容征服用户，而非硬广。
 """
 
         # 材质库
