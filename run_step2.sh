@@ -16,4 +16,4 @@ if ! command -v uv &> /dev/null; then
 fi
 
 uv sync
-uv run python -m step2_article.runner
+uv run python -m step2_article.agent_runner

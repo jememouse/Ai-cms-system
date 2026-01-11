@@ -16,4 +16,4 @@ if ! command -v uv &> /dev/null; then
 fi
 
 uv sync
-uv run python -m step3_publish.runner
+uv run python -m step3_publish.agent_runner

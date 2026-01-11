@@ -31,35 +31,81 @@ def run():
     with open(INPUT_FILE, 'r', encoding='utf-8') as f:
         topics = json.load(f)
         
-    # 过滤 Pending
-    pending_topics = [t for t in topics if t.get('Status') == 'Pending']
-    print(f"📋 发现 {len(pending_topics)} 个待写选题")
+    # 过滤 Ready (User Requirement: 标题生成是 "Ready")
+    pending_topics = [t for t in topics if t.get('Status') == 'Ready']
+    print(f"📋 发现 {len(pending_topics)} 个 Ready 选题")
     
-    for item in pending_topics[:5]: # 演示只跑5个
+    # Load Config Limit
+    max_limit = config.MAX_GENERATE_PER_CATEGORY
+    print(f"⚙️  每分类处理上限: {max_limit}")
+
+    # 3. 分组与 Round-Robin 排序
+    # Group by Category
+    from collections import defaultdict
+    grouped_topics = defaultdict(list)
+    for t in pending_topics:
+        cat = t.get('大项分类', '未分类')
+        grouped_topics[cat].append(t)
+    
+    print("📊 待处理选题分布:")
+    for cat, items in grouped_topics.items():
+        print(f"   - {cat}: {len(items)} 条")
+        
+    # Round-Robin Merge
+    # [CatA_1, CatB_1, CatC_1, CatA_2, ...]
+    sorted_topics = []
+    from itertools import zip_longest
+    # 取每个分类的前 max_limit 条
+    lists = [items[:max_limit] for items in grouped_topics.values()]
+    
+    for items in zip_longest(*lists):
+        for item in items:
+            if item is not None:
+                sorted_topics.append(item)
+                
+    print(f"🔄 均衡排序后共 {len(sorted_topics)} 条任务")
+    
+    import random
+    from datetime import datetime
+    
+    # 4. Execute
+    for idx, item in enumerate(sorted_topics):
+        print(f"\n--- [{idx + 1}/{len(sorted_topics)}] {item['大项分类']} | {item['Topic'][:30]}... ---")
+        
         article = editor.write_article(item['Topic'], item['大项分类'])
         
         if article:
             # Save to Feishu (System Action)
             # 同样，Agent 只负责产出，IO由系统层负责
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             record = {
                 "Topic": item['Topic'],
                 "Title": article.get('title'),
                 "HTML_Content": article.get('html_content'),
-                "Category": item['大项分类'],
-                "Status": "Generated", # 待发布
-                "Keywords": article.get('keywords'),
-                "Summary": article.get('summary'),
-                "Description": article.get('description'),
+                "大项分类": item['大项分类'],
+                "Status": config.STATUS_PENDING, # User Requirement: 文章生成为 "Pending"
+                "关键词": article.get('keywords'),
+                "摘要": article.get('summary'),
+                "描述": article.get('description'),
                 "Tags": article.get('tags'),
-                "One_Line_Summary": article.get('one_line_summary'),
-                "Schema_FAQ": json.dumps(article.get('schema_faq', []), ensure_ascii=False)
+                "生成时间": current_time, # User Requirement: 每个状态的时间要插入对应的单元格
+                "Tags": article.get('tags'),
+                "生成时间": current_time, # 文章生成时间
+                "选题生成时间": item.get('created_at', ''), # Step 1 产生的时间
+                "One_Line_Summary": article.get('one_line_summary', ''),
+                "Schema_FAQ": json.dumps(article.get('schema_faq', []), ensure_ascii=False),
+                "Key_Points": json.dumps(article.get('key_points', []), ensure_ascii=False)
             }
             res_id = client.create_record(record)
             if res_id:
-                print(f"   💾 已保存至飞书 (ID: {res_id})")
-                item['Status'] = 'Done' # Update local status
+                print(f"   💾 已保存至飞书 (ID: {res_id}, Status: Pending)")
+                item['Status'] = 'Pending' # Update local status
         
-        time.sleep(2)
+        # Random Interval
+        # Optimization: 5-10s to avoid rate limit
+        wait_time = random.uniform(5, 10)
+        print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
+        time.sleep(wait_time)
         
     # Update JSON
     with open(INPUT_FILE, 'w', encoding='utf-8') as f:

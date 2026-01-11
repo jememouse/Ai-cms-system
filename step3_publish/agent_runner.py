@@ -16,13 +16,21 @@ def run():
     agent = PublisherAgent()
     client = FeishuClient()
     
-    # 1. 获取待发布文章 (Status='Generated')
+    # 1. 获取待发布文章 (Status='Pending')
     print("🔍 [System] 正在扫描待发布文章...")
-    pending_records = client.fetch_records_by_status(status=config.STATUS_GENERATED, limit=5) # 每次限制5篇
+    # 限制根据 Config
+    limit = config.MAX_PUBLISH_PER_CATEGORY
+    print(f"⚙️  发布上限: {limit} 篇")
+    
+    pending_records = client.fetch_records_by_status(status=config.STATUS_PENDING, limit=limit)
     
     print(f"📋 发现 {len(pending_records)} 篇待发布文章")
     
-    for record in pending_records:
+    import random
+    
+    for idx, record in enumerate(pending_records):
+        print(f"\n--- [{idx + 1}/{len(pending_records)}] 发布: {record.get('title', '')[:30]}... ---")
+        
         # 转换为 Skill 需要的格式
         article_data = {
             "title": record.get('title'),
@@ -45,8 +53,58 @@ def run():
                 "发布时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
             print(f"   💾 [System] 飞书状态已更新为 Published")
+            
+            # 4. Asset Write-back (SEO Closed Loop)
+            _record_to_assets(article_data, published_url)
         
-        time.sleep(5) # 间隔
+        # Random Interval
+        if idx < len(pending_records) - 1:
+            # Optimization: 60-120s for SEO safety
+            wait_time = random.uniform(60, 120)
+            print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
+            time.sleep(wait_time)
+
+def _record_to_assets(article, url):
+    """
+    将已发布的文章记录到本地资产库，用于 SEO 内链
+    """
+    import json
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ASSETS_FILE = os.path.join(BASE_DIR, "published_assets.json")
+    
+    # 构造新记录
+    new_record = {
+        "title": article.get("title"),
+        "url": url,
+        "keywords": article.get("keywords"),
+        "category_id": article.get("category_id"),
+        "summary": article.get("summary"),
+        "published_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    try:
+        data = []
+        if os.path.exists(ASSETS_FILE):
+            with open(ASSETS_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    data = json.load(f)
+                except:
+                    data = []
+        
+        # 简单去重 (按 URL)
+        existing_idx = next((i for i, item in enumerate(data) if item.get("url") == url), -1)
+        if existing_idx >= 0:
+            data[existing_idx] = new_record
+        else:
+            data.append(new_record)
+            
+        with open(ASSETS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            
+        print(f"   📚 [SEO] 已收录至资产库 ({len(data)} 篇)")
+        
+    except Exception as e:
+        print(f"   ⚠️ 资产库写入失败: {e}")
 
 if __name__ == "__main__":
     run()

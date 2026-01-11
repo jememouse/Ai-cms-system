@@ -83,17 +83,24 @@ class DeepWriteSkill(BaseSkill):
             {rag_context}
             """
 
+        # 动态构造 SEO/GEO 指令
+        target_cities = ["深圳", "义乌", "广州", "东莞", "上海", "杭州"]
+        selected_city = random.choice(target_cities)
+        
         prompt = f"""
-        你是一位拥有10年经验的 B2B 包装行业内容营销专家。
+        你是一位拥有10年经验的 B2B 包装行业内容营销专家，专注于为 **{selected_city}** 地区的包装客户提供解决方案。
         请为主题 "{topic}"（分类：{category}）撰写一篇深度文章。
         
         {rag_instruction}
         
         【写作要求】
         1. **结构**: 定义式开头 -> 核心要点(blockquote) -> 正文(含表格) -> 一句话总结 -> FAQ -> 作者标记。
-        2. **GEO优化**: 包含地域词（如义乌、深圳）、场景词。
-        3. **格式**: 返回纯 JSON。
-        
+        2. **GEO优化**: 全文必须自然植入目标城市 "**{selected_city}**" (例如: "{selected_city}包装厂", "{selected_city}礼盒定制", "发货至{selected_city}"), 密度至少 3 次。
+        3. **配图**: 在正文中至少插入 2 张图片链接。使用格式: <img src="https://image.pollinations.ai/prompt/{{英文关键词}}?width=1024&height=768&nologo=true" alt="{{中文描述}}">。
+           - note: 提取文章核心关键词翻译成英文填入URL。
+        4. **标题**: 必须严格控制在 16 字以内。
+        5. **格式**: 返回纯 JSON。
+
         {{
           "title": "标题...",
           "html_content": "HTML内容...",
@@ -103,7 +110,8 @@ class DeepWriteSkill(BaseSkill):
           "description": "...",
           "tags": "...",
           "schema_faq": [],
-          "one_line_summary": "..."
+          "one_line_summary": "...",
+          "key_points": ["要点1", "要点2"]
         }}
         """
         

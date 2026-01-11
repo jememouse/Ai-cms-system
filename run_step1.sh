@@ -16,4 +16,4 @@ if ! command -v uv &> /dev/null; then
 fi
 
 uv sync
-uv run python -m step1_trends.runner
+uv run python -m step1_trends.agent_runner

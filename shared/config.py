@@ -35,7 +35,7 @@ FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "https://open.feishu.cn/ope
 # 小红书配置
 # 注意：这是新表的 ID，不是原来的主表 ID
 FEISHU_XHS_TABLE_ID = os.getenv("FEISHU_XHS_TABLE_ID", "tblf1DMg5p9HXcwD") 
-MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "10")) # 每日/单次运行最大生成数
+MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "20")) # 每日/单次运行最大生成数
 
 # WellCMS 配置
 WELLCMS_USERNAME = os.getenv("WELLCMS_USERNAME", "product_manager")
@@ -58,10 +58,11 @@ CATEGORY_MAP = {
 STATUS_READY = "Ready"         # 节点1完成: 标题已生成，等待文章生成
 STATUS_PENDING = "Pending"     # 节点2完成: 文章已生成，等待发布
 STATUS_PUBLISHED = "Published" # 节点3完成: 已发布
+# STATUS_GENERATED 已废弃，合并入 STATUS_PENDING
 
 # 每分类最大处理数量
 MAX_GENERATE_PER_CATEGORY = int(os.getenv("MAX_GENERATE_PER_CATEGORY", "100"))  # 节点2: 文章生成 (默认全部)
-MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "2"))      # 节点3: RPA 发布
+MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "10"))      # 节点3: RPA 发布
 
 # 发布配置文件路径
 PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
