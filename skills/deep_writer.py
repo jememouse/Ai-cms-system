@@ -140,7 +140,7 @@ class DeepWriteSkill(BaseSkill):
         geo_context = tier_data["context"].format(city=selected_city)
         
         prompt = f"""
-        你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 自有工厂）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
+        你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 强大的供应链及品质管理+交付系统）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
         请为主题 "{topic}"（分类：{category}）撰写一篇符合百度搜索规范的深度文章。
         
         {rag_instruction}

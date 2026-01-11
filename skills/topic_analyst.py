@@ -75,8 +75,8 @@ class TopicAnalysisSkill(BaseSkill):
         # Define selected_city or get it from config if needed, for now, a placeholder
         selected_city = "上海" # Placeholder for demonstration
         prompt = f"""
-        我们是一家 **"包装在线定制电商平台（配套专业加工工厂）"** （盒艺家）。
-        你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 自有工厂）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
+        我们是一家 **"包装在线定制电商平台（强大的供应链及品质管理+交付系统）"** （盒艺家）。
+        你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 强大的供应链及品质管理+交付系统）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
         
         请从以下全网热点中，**务必挑选出 1 个** (为了演示速度改为1个) 最适合写文章的话题。
         
