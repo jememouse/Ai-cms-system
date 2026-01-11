@@ -73,19 +73,22 @@ class TopicAnalysisSkill(BaseSkill):
     def _analyze_trends(self, trends):
         trends_str = "\n".join([f"- {t}" for t in trends])
         prompt = f"""
-        我是一个做【包装印刷、礼盒定制】的工厂。
-        请从以下全网热点中，**务必挑选出 10 个** (为了演示速度改为10个，原逻辑33个) 最适合写文章的话题。
+        我们是一家 **"工业级品质 + 柔性化服务"** 的包装工厂（盒艺家）。
+        核心优势：**1个起订、3秒报价、最快1天交付**，同时服务 B2B大客户 和 B2C/C2M小微个体。
         
-        筛选优先级：
-        1. 高意图需求（包含 [搜索需求]、[1688采购]、怎么选、多少钱）
-        2. 商业关联（春节礼盒、电商包装、展会）
+        请从以下全网热点中，**务必挑选出 1 个** (为了演示速度改为1个) 最适合写文章的话题。
+        
+        筛选优先级（兼顾 B2B 与 B2C）：
+        1. **高意图转化**：包含 [搜索需求]、[1688采购]、多少钱、怎么选。
+        2. **长尾个性化**：包含 小批量、礼品定制、伴手礼、Etsy包装、私域包装。
+        3. **商业关联**：春节礼盒、电商包装、展会、环保包装。
         
         热搜列表：
         {trends_str}
         
         请严格返回 JSON 格式列表：
         [
-            {{"topic": "话题名", "angle": "结合角度", "priority": "S"}}
+            {{"topic": "话题名", "angle": "结合角度(如: 适合小批量试单)", "priority": "S"}}
         ]
         """
         res = self._call_deepseek(prompt)
@@ -97,14 +100,15 @@ class TopicAnalysisSkill(BaseSkill):
         angle = trend.get('angle', '')
         
         prompt = f"""
-        背景：{brand_name} (包装定制工厂)
+        背景：{brand_name} (既接B2B大单，也接B2C小单，**1个起订**)
         热点：{topic} (角度: {angle})
         
-        任务：生成 6 个 SEO 标题。
+        任务：生成 5 个高点击率 Title。
         要求：
-        1. 2026年，**严格控制在 16 个汉字以内** (重要！首页排版需要)。
-        2. 绝大部分不要出现品牌词。
-        3. 必须包含分类：【专业知识】、【行业资讯】、【产品介绍】。
+        1. **混合策略**：生成的5个标题中，至少有2个体现 "小批量/定制/个性化" 等 B2C 痛点，其余体现 B2B 专业性。
+        2. 2026年，**严格控制在 16 个字符以内 (按双字节汉字计算)**。
+        3. 绝大部分不要出现品牌词。
+        4. 必须包含分类：【专业知识】、【行业资讯】、【产品介绍】。
         
         返回 JSON:
         [
@@ -113,6 +117,7 @@ class TopicAnalysisSkill(BaseSkill):
         ]
         """
         res = self._call_deepseek(prompt)
+        # 兼容旧代码，确保至少返回列表
         return res if isinstance(res, list) else []
 
     def _clean_category(self, cat):
