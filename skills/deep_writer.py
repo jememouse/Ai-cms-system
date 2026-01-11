@@ -103,7 +103,8 @@ class DeepWriteSkill(BaseSkill):
             "tech": "全球顶级数码设备 × 数码印刷技术 × AI智能系统，支持RGB/CMYK色彩标准",
             "contact_cta": "免费获取报价",
             "phone": "177-2795-6114",
-            "email": "heyijiapack@gmail.com"
+            "email": "heyijiapack@gmail.com",
+            "website": "https://heyijiapack.com/"
         }
         
         # 动态构造 RAG 指令
