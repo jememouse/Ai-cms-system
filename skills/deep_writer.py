@@ -116,39 +116,41 @@ class DeepWriteSkill(BaseSkill):
             {rag_context}
             """
 
-        # 动态构造 SEO/GEO 指令 (分层城市策略)
+        # 动态构造 SEO/GEO 指令 (中国大陆优化版)
         GEO_TIERS = {
-            "core": {  # 核心市场 (工厂所在地周边) - 权重 50%
-                "cities": ["东莞", "深圳", "广州", "佛山", "惠州"],
-                "context": "我们工厂位于{city}，可提供当日送样、面对面沟通服务"
+            "core": {  # 核心工业带 (精准打击工厂所在地) - 权重 60%
+                "cities": ["东莞长安", "东莞虎门", "东莞凤岗", "深圳宝安", "深圳龙岗", "广州白云", "佛山南海"],
+                "context": "我们工厂位于{city}产业带，可提供当日送样、面对面沟通服务"
             },
-            "radiation": {  # 辐射市场 (电商/出口集中地) - 权重 35%
-                "cities": ["上海", "杭州", "苏州", "宁波", "义乌"],
+            "radiation": {  # 辐射市场 (电商/出口集中地) - 权重 30%
+                "cities": ["上海", "杭州", "苏州", "宁波", "义乌", "青岛"],
                 "context": "我们为{city}地区提供快速物流支持，3天内可达"
             },
-            "growth": {  # 潜力市场 (内陆物流枢纽) - 权重 15%
-                "cities": ["成都", "重庆", "武汉", "郑州", "西安"],
+            "growth": {  # 潜力市场 (内陆物流枢纽) - 权重 10%
+                "cities": ["成都", "重庆", "武汉", "郑州", "西安", "长沙"],
                 "context": "我们已开通{city}专线物流，助力西部市场拓展"
             }
         }
         
         # 加权随机选择城市
-        tier_weights = [("core", 0.5), ("radiation", 0.35), ("growth", 0.15)]
+        tier_weights = [("core", 0.6), ("radiation", 0.3), ("growth", 0.1)]
         selected_tier = random.choices([t[0] for t in tier_weights], weights=[t[1] for t in tier_weights])[0]
         tier_data = GEO_TIERS[selected_tier]
         selected_city = random.choice(tier_data["cities"])
         geo_context = tier_data["context"].format(city=selected_city)
         
         prompt = f"""
-        你是一位拥有10年经验的 B2B 包装行业内容营销专家，专注于为 **{selected_city}** 地区的包装客户提供解决方案。
-        请为主题 "{topic}"（分类：{category}）撰写一篇深度文章。
+        你是一位拥有10年经验的 B2B 包装行业内容营销专家，即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
+        请为主题 "{topic}"（分类：{category}）撰写一篇符合百度搜索规范的深度文章。
         
         {rag_instruction}
         
-        【写作要求】
+        【SEO写作要求 (百度优化版)】
         1. **结构**: 
-           - 定义式开头 -> 目录(TOC) -> 核心要点(blockquote) -> 正文(含表格) -> 一句话总结 -> FAQ -> 品牌签名。
-           - 所有 H2/H3 标题必须带 id 属性 (如: `<h2 id="material-selection">材质选择</h2>`)，用于目录锚点。
+           - **首段直出答案**: 第一段必须直接定义核心概念或回答问题 (模拟百度百科/精选摘要)，不要废话。
+           - 目录(TOC) -> 核心要点 -> 正文(含表格) -> 总结 -> FAQ -> 品牌签名。
+           - 标题层级: H1(仅1个) -> H2 -> H3，逻辑清晰。
+           - 所有 H2/H3 标题必须带 id 属性。
            - **品牌签名** (简洁版):
              ```html
              <div class="brand-signature">
