@@ -2,8 +2,8 @@ name: Step1 - 热词搜索与标题生成
 
 on:
   schedule:
-    # 北京时间 00:37 (凌晨执行一次，积压消化后可恢复多次) -> UTC 16:37 (前一天)
-    - cron: '37 16 * * *'
+    # 北京时间 08:00, 21:00 -> UTC 00:00, 13:00
+    - cron: '0 0,13 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -31,4 +31,4 @@ jobs:
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         TZ: 'Asia/Shanghai'
       run: |
-        uv run python -m step1_trends.runner
+        uv run python -m step1_trends.agent_runner

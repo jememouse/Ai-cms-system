@@ -2,8 +2,8 @@ name: Step3 - RPA 发布到 WellCMS
 
 on:
   schedule:
-    # 北京时间 07:30, 12:30, 17:30, 20:30 (提前半小时避开高峰) -> UTC 23:30(前一天), 04:30, 09:30, 12:30
-    - cron: '30 23,4,9,12 * * *'
+    # 每小时执行一次 (稳健发布)
+    - cron: '0 * * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -37,4 +37,4 @@ jobs:
         PUBLISH_CONFIG_JSON: ${{ secrets.PUBLISH_CONFIG_JSON }}
         TZ: 'Asia/Shanghai'
       run: |
-        uv run python -m step3_publish.runner
+        uv run python -m step3_publish.agent_runner
