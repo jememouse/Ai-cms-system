@@ -82,8 +82,9 @@ def run():
                         upload_list.append(record)
                 
                 if upload_list:
-                    client.batch_create_records(upload_list)
-                    print(f"✅ 已同步 {len(upload_list)} 条记录到飞书")
+                    success = client.batch_create_records(upload_list)
+                    if success:
+                        print(f"✅ 已同步 {len(upload_list)} 条记录到飞书")
                 else:
                     print("⚠️ 没有新选题需要同步")
                     

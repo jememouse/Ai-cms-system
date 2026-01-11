@@ -93,7 +93,7 @@ def run():
                 "描述": article.get('description'),
                 "Tags": article.get('tags'),
                 "生成时间": current_time, 
-                # "选题生成时间": item.get('created_at', ''), # 选题时间已存在，无需更新
+                "选题生成时间": item.get('created_at', ''), 
                 "One_Line_Summary": article.get('one_line_summary', ''),
                 "Schema_FAQ": json.dumps(article.get('schema_faq', []), ensure_ascii=False),
                 "Key_Points": json.dumps(article.get('key_points', []), ensure_ascii=False)
