@@ -38,6 +38,10 @@ class TrendSearchSkill(BaseSkill):
 
         print("📡 [TrendSearch] 开始多源数据抓取...")
         
+        # ===== 种子词轮换策略 (保持话题多样性) =====
+        if mining_seeds:
+            mining_seeds = self._rotate_seeds(mining_seeds)
+        
         # 1. 挖掘长尾需求
         if mining_seeds:
             all_trends.extend(self._fetch_baidu_suggestions(mining_seeds))
@@ -63,6 +67,64 @@ class TrendSearchSkill(BaseSkill):
         return unique_trends
 
     # --- Internal Fetch Methods (Moved from fetch_trends.py) ---
+
+    def _rotate_seeds(self, seeds: list) -> list:
+        """
+        基于日期的种子词轮换，保持话题多样性
+        每天使用不同的种子词组合，避免内容同质化
+        """
+        import random
+        from datetime import datetime
+        
+        # 定义种子词分类 (基于关键词匹配)
+        SEED_GROUPS = {
+            "产品类": ["礼盒", "纸箱", "飞机盒", "手提袋", "包装盒", "纸盒", "彩盒", "内托", "内衬"],
+            "工艺类": ["烫金", "UV", "覆膜", "击凸", "印刷", "模切", "制版"],
+            "行业趋势": ["国潮", "极简", "智能", "可降解", "碳中和", "数字化", "AI", "趋势"],
+            "展会活动": ["展", "会", "峰会", "论坛", "大赛"],
+            "通用转化": ["定制", "厂家", "批发", "源头", "直销", "免费", "报价"]
+        }
+        
+        # 按日期选择主力分组 (0=周一, 6=周日)
+        weekday = datetime.now().weekday()
+        group_schedule = ["产品类", "工艺类", "行业趋势", "展会活动", "通用转化", "产品类", "行业趋势"]
+        primary_group = group_schedule[weekday]
+        
+        # 分类种子词
+        categorized = {k: [] for k in SEED_GROUPS}
+        uncategorized = []
+        
+        for seed in seeds:
+            matched = False
+            for group, keywords in SEED_GROUPS.items():
+                if any(kw in seed for kw in keywords):
+                    categorized[group].append(seed)
+                    matched = True
+                    break
+            if not matched:
+                uncategorized.append(seed)
+        
+        # 构建今日种子组合: 主力组50% + 其他组各10% + 未分类20%
+        result = []
+        
+        # 主力组 (最多30个)
+        primary_seeds = categorized.get(primary_group, [])
+        result.extend(random.sample(primary_seeds, min(30, len(primary_seeds))))
+        
+        # 其他组各取5个
+        for group, group_seeds in categorized.items():
+            if group != primary_group and group_seeds:
+                result.extend(random.sample(group_seeds, min(5, len(group_seeds))))
+        
+        # 未分类取10个
+        if uncategorized:
+            result.extend(random.sample(uncategorized, min(10, len(uncategorized))))
+        
+        # 打乱顺序
+        random.shuffle(result)
+        
+        print(f"🔄 [SeedRotation] 今日主力: {primary_group} | 种子数: {len(result)} (原{len(seeds)})")
+        return result
 
     def _fetch_baidu_hot(self):
         try:
