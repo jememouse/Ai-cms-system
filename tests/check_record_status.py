@@ -9,8 +9,8 @@ from shared.feishu_client import FeishuClient
 
 def check_record():
     client = FeishuClient()
-    # Record ID captured from the previous test run output (Step 921)
-    record_id = "recv7SlgV0MZY0"
+    # Record ID captured from the previous test run output (Step 1065)
+    record_id = "recv7SraQA4cPx"
     
     url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{client.base_id}/tables/{client.table_id}/records/{record_id}"
     # Use the client's internal token which is automatically refreshed

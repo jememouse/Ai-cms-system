@@ -145,6 +145,7 @@ class FeishuClient:
                     "key_points": parse_text_field(fields.get("Key_Points", "")),
                     "url": parse_text_field(fields.get("URL", "")),
                     "published_at": parse_text_field(fields.get("发布时间", "")),
+                    "xhs_status": parse_text_field(fields.get("XHS_Status", "")), # 新增状态字段
                 })
             
             total = data.get("data", {}).get("total", 0)
@@ -192,12 +193,30 @@ class FeishuClient:
             print(f"   ⚠️ 更新网络错误: {e}")
             return False
     
-    def batch_create_records(self, records: List[Dict]) -> bool:
+    def create_record(self, fields: Dict, table_id: str = None) -> Optional[str]:
+        """创建单条记录"""
+        target_table_id = table_id if table_id else self.table_id
+        
+        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{target_table_id}/records"
+        
+        try:
+            resp = requests.post(url, headers=self._headers(), json={"fields": fields}, timeout=30)
+            data = resp.json()
+            if data.get("code") == 0:
+                return data.get("data", {}).get("record", {}).get("record_id")
+            print(f"   ❌ 创建记录失败: {data.get('msg')}")
+            return None
+        except Exception as e:
+            print(f"   ⚠️ 创建记录网络错误: {e}")
+            return None
+
+    def batch_create_records(self, records: List[Dict], table_id: str = None) -> bool:
         """批量创建记录"""
         if not self.token or not records:
             return False
         
-        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{self.table_id}/records/batch_create"
+        target_table_id = table_id if table_id else self.table_id
+        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{self.base_id}/tables/{target_table_id}/records/batch_create"
         
         payload_records = [{"fields": r} for r in records]
         
