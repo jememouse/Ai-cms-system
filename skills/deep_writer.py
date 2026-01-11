@@ -139,7 +139,8 @@ class DeepWriteSkill(BaseSkill):
            - CTA转化: `<a href="{cta_link['url']}">{cta_link['anchor']}</a>`
            - 链接文字要自然融入上下文，不可生硬堆砌。
         5. **标题**: 必须严格控制在 16 字以内。
-        6. **格式**: 返回纯 JSON。
+        6. **URL Slug**: 生成一个 SEO 友好的英文 URL 片段 (如: "mooncake-gift-box-guide")。要求: 全小写，用连字符连接，不超过 50 字符。
+        7. **格式**: 返回纯 JSON。
 
         {{
           "title": "标题...",
@@ -157,6 +158,7 @@ class DeepWriteSkill(BaseSkill):
             "publisher": {{"@type": "Organization", "name": "{brand_name}", "logo": "https://heyijiapack.com/logo.png"}},
             "image": "文章首图URL"
           }},
+          "url_slug": "mooncake-gift-box-packaging-guide",
           "one_line_summary": "...",
           "key_points": ["要点1", "要点2"]
         }}
