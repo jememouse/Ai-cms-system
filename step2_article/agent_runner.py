@@ -93,7 +93,7 @@ def run():
                 "描述": article.get('description'),
                 "Tags": article.get('tags'),
                 "生成时间": current_time, 
-                "选题生成时间": item.get('created_at', ''), 
+                # "选题生成时间": item.get('created_at', ''), # Retain original value
                 "One_Line_Summary": article.get('one_line_summary', ''),
                 "Schema_FAQ": json.dumps(article.get('schema_faq', []), ensure_ascii=False),
                 "Key_Points": json.dumps(article.get('key_points', []), ensure_ascii=False)
@@ -115,10 +115,6 @@ def run():
         wait_time = random.uniform(5, 10)
         print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
         time.sleep(wait_time)
-        
-    # Update JSON
-    with open(INPUT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(topics, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
     run()
