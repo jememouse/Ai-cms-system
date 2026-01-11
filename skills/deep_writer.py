@@ -101,7 +101,9 @@ class DeepWriteSkill(BaseSkill):
                 "行业经验": "20年"
             },
             "tech": "全球顶级数码设备 × 数码印刷技术 × AI智能系统，支持RGB/CMYK色彩标准",
-            "contact_cta": "免费获取报价"
+            "contact_cta": "免费获取报价",
+            "phone": "177-2795-6114",
+            "email": "heyijiapack@gmail.com"
         }
         
         # 动态构造 RAG 指令
@@ -152,6 +154,7 @@ class DeepWriteSkill(BaseSkill):
                <p><strong>{brand_info['slogan']}</strong></p>
                <p>✅ {' · '.join(brand_info['usps'][:3])}</p>
                <p>📊 服务企业{brand_info['stats']['服务企业']} | 客户满意度{brand_info['stats']['客户满意度']} | {brand_info['stats']['行业经验']}行业经验</p>
+               <p>📞 {brand_info['phone']} | 📧 {brand_info['email']}</p>
                <p><a href="/contact.html">👉 {brand_info['contact_cta']}</a></p>
              </div>
              ```
