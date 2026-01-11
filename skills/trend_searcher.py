@@ -1,0 +1,215 @@
+import sys
+import os
+import requests
+import re
+import json
+import time
+from datetime import datetime
+from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.skill import BaseSkill
+from shared import config
+
+# 加载 .env 环境变量
+load_dotenv()
+
+class TrendSearchSkill(BaseSkill):
+    """
+    技能: 全网热点挖掘 (Baidu, Weibo, Toutiao, etc.)
+    """
+    def __init__(self):
+        super().__init__(
+            name="trend_search",
+            description="从百度、微博、头条、知乎、小红书等平台抓取热门话题"
+        )
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Cookie": "SUB=_2AkMSb-1af8NxqwJRmP0SzGvmZY1yyA_EieKkA3HJJRMxHRl-yT9kqmsstRB6POKqfE_JzXqqfE_JzXqqfE_JzXqq;" 
+        }
+
+    def execute(self, input_data: dict) -> list:
+        """
+        Input: {"mining_seeds": ["seed1", ...]}
+        Output: ["raw_trend_1", "raw_trend_2", ...]
+        """
+        mining_seeds = input_data.get("mining_seeds", [])
+        all_trends = []
+
+        print("📡 [TrendSearch] 开始多源数据抓取...")
+        
+        # 1. 挖掘长尾需求
+        if mining_seeds:
+            all_trends.extend(self._fetch_baidu_suggestions(mining_seeds))
+            all_trends.extend(self._fetch_1688_suggestions(mining_seeds))
+            all_trends.extend(self._fetch_taobao_suggestions(mining_seeds))
+            all_trends.extend(self._fetch_zhihu_hot_questions(mining_seeds))
+            all_trends.extend(self._fetch_xiaohongshu_trends(mining_seeds))
+            all_trends.extend(self._fetch_google_trends(mining_seeds))
+
+        # 2. 抓取平台热榜
+        for t in self._fetch_baidu_hot():
+            all_trends.append(f"[百度] {t}")
+        for t in self._fetch_weibo_hot():
+            all_trends.append(f"[微博] {t}")
+        for t in self._fetch_toutiao_hot():
+            all_trends.append(f"[头条] {t}")
+        for t in self._fetch_36kr_hot():
+            all_trends.append(f"[36氪] {t}")
+
+        # 去重
+        unique_trends = list(set(all_trends))
+        print(f"📊 [TrendSearch] 共收集到 {len(unique_trends)} 个唯一热点话题")
+        return unique_trends
+
+    # --- Internal Fetch Methods (Moved from fetch_trends.py) ---
+
+    def _fetch_baidu_hot(self):
+        try:
+            resp = requests.get("https://top.baidu.com/board?tab=realtime", headers=self.headers, timeout=10)
+            resp.encoding = 'utf-8'
+            titles = re.findall(r'<div class="c-single-text-ellipsis">\s*(.*?)\s*</div>', resp.text)
+            return [t.strip() for t in titles if t.strip() and "置顶" not in t][:15]
+        except Exception as e:
+            print(f"   ❌ [Baidu] 失败: {e}")
+            return []
+
+    def _fetch_weibo_hot(self):
+        try:
+            resp = requests.get("https://s.weibo.com/top/summary", headers=self.headers, timeout=10)
+            titles = re.findall(r'<a href="/weibo\?q=[^"]+" target="_blank">([^<]+)</a>', resp.text)
+            return [t.strip() for t in titles if t.strip()][:15]
+        except Exception as e:
+            print(f"   ❌ [Weibo] 失败: {e}")
+            return []
+
+    def _fetch_toutiao_hot(self):
+        try:
+            resp = requests.get("https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc", headers=self.headers, timeout=10)
+            data = resp.json()
+            titles = []
+            if "fixed_top_data" in data:
+                titles.extend([i.get("Title") for i in data["fixed_top_data"]])
+            if "data" in data:
+                titles.extend([i.get("Title") for i in data["data"]])
+            return titles[:15]
+        except Exception as e:
+            print(f"   ❌ [Toutiao] 失败: {e}")
+            return []
+
+    def _fetch_36kr_hot(self):
+        try:
+            resp = requests.get("https://36kr.com/newsflashes", headers=self.headers, timeout=10)
+            html = resp.text
+            start_marker = "window.initialState="
+            if start_marker in html:
+                start_idx = html.find(start_marker) + len(start_marker)
+                end_idx = html.find("</script>", start_idx)
+                json_str = html[start_idx:end_idx].strip().rstrip(";")
+                data = json.loads(json_str)
+                items = data.get("newsflashCatalogData", {}).get("data", {}).get("newsflashList", {}).get("data", {}).get("itemList", [])
+                titles = []
+                for item in items:
+                    t = item.get("templateMaterial", {}).get("widgetTitle")
+                    if t: titles.append(t)
+                return titles[:15]
+            return []
+        except Exception as e:
+            print(f"   ❌ [36Kr] 失败: {e}")
+            return []
+
+    def _fetch_baidu_suggestions(self, seeds):
+        suggestions = []
+        for seed in seeds:
+            try:
+                url = f"http://suggestion.baidu.com/su?wd={seed}&p=3&cb=window.bdsug.sug"
+                resp = requests.get(url, headers=self.headers, timeout=5)
+                match = re.search(r's:(\[.*?\])', resp.text)
+                if match:
+                    words = json.loads(match.group(1).replace("'", '"'))[:5]
+                    suggestions.extend([f"[搜索需求] {w}" for w in words])
+            except: pass
+        return suggestions
+
+    def _fetch_1688_suggestions(self, seeds):
+        suggestions = []
+        import random
+        for seed in random.sample(seeds, min(10, len(seeds))):
+             try:
+                url = f"https://suggest.1688.com/bin/suggest?code=utf-8&q={seed}"
+                resp = requests.get(url, headers=self.headers, timeout=5)
+                data = resp.json()
+                if "result" in data:
+                    suggestions.extend([f"[1688采购] {i['q']}" for i in data['result'][:5]])
+             except: pass
+        return suggestions
+
+    def _fetch_taobao_suggestions(self, seeds):
+        suggestions = []
+        import random
+        for seed in random.sample(seeds, min(10, len(seeds))):
+            try:
+                url = f"https://suggest.taobao.com/sug?code=utf-8&q={seed}&k=1&area=c2c"
+                resp = requests.get(url, headers=self.headers, timeout=5)
+                data = resp.json()
+                if "result" in data:
+                    suggestions.extend([f"[淘宝热搜] {i[0]}" for i in data['result'][:5]])
+            except: pass
+        return suggestions
+    
+    def _fetch_zhihu_hot_questions(self, seeds):
+        questions = []
+        import random
+        for seed in random.sample(seeds, min(8, len(seeds))):
+            try:
+                url = f"https://www.zhihu.com/api/v4/search_v3?t=general&q={seed}&offset=0&limit=5"
+                headers = {**self.headers, "Referer": "https://www.zhihu.com/search"}
+                resp = requests.get(url, headers=headers, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    for item in data.get("data", [])[:3]:
+                        if item.get("type") == "search_result":
+                            obj = item.get("object", {})
+                            title = obj.get("title", "") or obj.get("question", {}).get("title", "")
+                            if title:
+                                clean = re.sub(r'<[^>]+>', '', title)
+                                questions.append(f"[知乎问答] {clean}")
+            except: pass
+        return list(set(questions))
+
+    def _fetch_xiaohongshu_trends(self, seeds):
+        trends = []
+        import random
+        for seed in random.sample(seeds, min(6, len(seeds))):
+            try:
+                url = f"https://edith.xiaohongshu.com/api/sns/web/v1/search/hot_list"
+                headers = {**self.headers, "Referer": "https://www.xiaohongshu.com/"}
+                resp = requests.get(url, headers=headers, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("success"):
+                        for item in data["data"].get("list", [])[:10]:
+                            if any(k in item.get("title", "") for k in ["包装","礼盒","送礼"]):
+                                trends.append(f"[小红书] {item['title']}")
+                        break
+            except: pass
+        
+        scenes = ["开箱体验","送礼推荐","高级感包装"]
+        for seed in random.sample(seeds, min(3, len(seeds))):
+            for s in random.sample(scenes, 2):
+                trends.append(f"[小红书] {seed}{s}")
+        return list(set(trends))
+
+    def _fetch_google_trends(self, seeds):
+        trends = []
+        keywords = ["custom packaging", "gift box wholesale", "mailer box"]
+        for kw in keywords:
+            try:
+                url = f"https://trends.google.com/trends/api/autocomplete/{kw.replace(' ', '%20')}?hl=en-US"
+                resp = requests.get(url, headers={"User-Agent": self.headers["User-Agent"]}, timeout=8)
+                text = resp.text[5:] if resp.text.startswith(")]}'") else resp.text
+                data = json.loads(text)
+                for t in data.get("default", {}).get("topics", [])[:3]:
+                    trends.append(f"[谷歌趋势] {t['title']}")
+            except: pass
+        return list(set(trends))
