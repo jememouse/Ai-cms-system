@@ -43,7 +43,7 @@ class DeepWriteSkill(BaseSkill):
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
-                    "max_tokens": 3500,
+                    "max_tokens": 4500,
                     "stream": False
                 },
                 timeout=(30, 300)
