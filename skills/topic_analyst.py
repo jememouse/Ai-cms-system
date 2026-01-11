@@ -72,9 +72,11 @@ class TopicAnalysisSkill(BaseSkill):
 
     def _analyze_trends(self, trends):
         trends_str = "\n".join([f"- {t}" for t in trends])
+        # Define selected_city or get it from config if needed, for now, a placeholder
+        selected_city = "上海" # Placeholder for demonstration
         prompt = f"""
-        我们是一家 **"工业级品质 + 柔性化服务"** 的包装工厂（盒艺家）。
-        核心优势：**1个起订、3秒报价、最快1天交付**，同时服务 B2B大客户 和 B2C/C2M小微个体。
+        我们是一家 **"包装在线定制电商平台（配套专业加工工厂）"** （盒艺家）。
+        你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 自有工厂）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
         
         请从以下全网热点中，**务必挑选出 1 个** (为了演示速度改为1个) 最适合写文章的话题。
         
