@@ -51,5 +51,44 @@ def run():
         print(f"💾 结果已保存至 {OUTPUT_FILE} (新增 {new_count} 条, 总计 {len(existing_data)} 条)")
         print(f"💾 结果已保存至 {OUTPUT_FILE}")
 
+        # Sync to Feishu (For Github Actions Persistence)
+        if new_count > 0:
+            print(f"☁️ 正在同步 {new_count} 条新选题到飞书...")
+            try:
+                from shared.feishu_client import FeishuClient
+                from shared import config
+                
+                client = FeishuClient()
+                
+                # Check duplicates in Feishu (This is expensive, so we just try batch create and ignore errors or rely on Feishu logic? 
+                # Better: only upload what we determined as new locally)
+                
+                # Filter 'topics' to only include the ones we just added to existing_data
+                # But 'topics' is the list of *newly generated* ones.
+                # Among them, we filtered some out if they were in existing_data *before*.
+                # Let's filter topics again to match the ones we appended.
+                
+                upload_list = []
+                for t in topics:
+                    # Check if this t was added. 
+                    # We can re-use the logic: if t['Topic'] was not in existing_topics BEFORE update.
+                    if t['Topic'] not in existing_topics:
+                        record = {
+                            "Topic": t['Topic'],
+                            "大项分类": t['大项分类'],
+                            "Status": config.STATUS_READY,
+                            "选题生成时间": t.get('created_at', '')
+                        }
+                        upload_list.append(record)
+                
+                if upload_list:
+                    client.batch_create_records(upload_list)
+                    print(f"✅ 已同步 {len(upload_list)} 条记录到飞书")
+                else:
+                    print("⚠️ 没有新选题需要同步")
+                    
+            except Exception as e:
+                print(f"❌ 飞书同步失败: {e}")
+
 if __name__ == "__main__":
     run()
