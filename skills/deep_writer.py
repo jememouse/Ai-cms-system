@@ -123,7 +123,10 @@ class DeepWriteSkill(BaseSkill):
         {rag_instruction}
         
         【写作要求】
-        1. **结构**: 定义式开头 -> 核心要点(blockquote) -> 正文(含表格) -> 一句话总结 -> FAQ -> 作者标记。
+        1. **结构**: 
+           - 定义式开头 -> 目录(TOC) -> 核心要点(blockquote) -> 正文(含表格) -> 一句话总结 -> FAQ -> 作者资质。
+           - 所有 H2/H3 标题必须带 id 属性 (如: `<h2 id="material-selection">材质选择</h2>`)，用于目录锚点。
+           - 作者资质部分必须包含: "{brand_name} | 15年包装印刷经验 | ISO9001认证工厂 | 服务客户3000+"。
         2. **GEO优化**: 
            - 全文必须自然植入目标城市 "**{selected_city}**" (例如: "{selected_city}包装厂", "{selected_city}礼盒定制"), 密度至少 3 次。
            - 在文末或服务说明处，自然包含: "**{geo_context}**"。
@@ -139,8 +142,9 @@ class DeepWriteSkill(BaseSkill):
            - CTA转化: `<a href="{cta_link['url']}">{cta_link['anchor']}</a>`
            - 链接文字要自然融入上下文，不可生硬堆砌。
         5. **标题**: 必须严格控制在 16 字以内。
-        6. **URL Slug**: 生成一个 SEO 友好的英文 URL 片段 (如: "mooncake-gift-box-guide")。要求: 全小写，用连字符连接，不超过 50 字符。
-        7. **格式**: 返回纯 JSON。
+        6. **Meta Description**: 必须 120-160 个字符，包含核心关键词和行动号召。
+        7. **URL Slug**: 生成一个 SEO 友好的英文 URL 片段 (如: "mooncake-gift-box-guide")。要求: 全小写，用连字符连接，不超过 50 字符。
+        8. **格式**: 返回纯 JSON。
 
         {{
           "title": "标题...",
@@ -154,11 +158,19 @@ class DeepWriteSkill(BaseSkill):
           "article_schema": {{
             "@type": "Article",
             "headline": "同title",
-            "author": {{"@type": "Organization", "name": "{brand_name}"}},
+            "author": {{"@type": "Organization", "name": "{brand_name}", "description": "15年包装印刷经验，ISO9001认证"}},
             "publisher": {{"@type": "Organization", "name": "{brand_name}", "logo": "https://heyijiapack.com/logo.png"}},
             "image": "文章首图URL"
           }},
+          "og_tags": {{
+            "og:title": "同title",
+            "og:description": "同description (120-160字符)",
+            "og:image": "文章首图URL",
+            "og:type": "article"
+          }},
           "url_slug": "mooncake-gift-box-packaging-guide",
+          "reading_time_minutes": 5,
+          "toc": [{{"id": "section-id", "title": "章节标题", "level": 2}}],
           "one_line_summary": "...",
           "key_points": ["要点1", "要点2"]
         }}
