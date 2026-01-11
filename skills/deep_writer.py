@@ -79,7 +79,7 @@ class DeepWriteSkill(BaseSkill):
             "专业知识": {"url": "/news/list-1.html", "anchor": "查看更多专业文章"},
             "行业资讯": {"url": "/news/list-2.html", "anchor": "浏览行业动态"},
             "产品介绍": {"url": "/news/list-3.html", "anchor": "探索更多产品"},
-            "CTA": {"url": "/contact.html", "anchor": "立即获取报价"}
+            "CTA": {"url": "https://heyijiapack.com/product", "anchor": "立即获取报价"}
         }
         category_link = INTERNAL_LINKS.get(category, INTERNAL_LINKS["行业资讯"])
         cta_link = INTERNAL_LINKS["CTA"]
@@ -156,7 +156,7 @@ class DeepWriteSkill(BaseSkill):
                <p>✅ {' · '.join(brand_info['usps'][:3])}</p>
                <p>📊 服务企业{brand_info['stats']['服务企业']} | 客户满意度{brand_info['stats']['客户满意度']} | {brand_info['stats']['行业经验']}行业经验</p>
                <p>📞 {brand_info['phone']} | 📧 {brand_info['email']}</p>
-               <p><a href="/contact.html">👉 {brand_info['contact_cta']}</a></p>
+               <p><a href="https://heyijiapack.com/product">👉 {brand_info['contact_cta']}</a></p>
              </div>
              ```
         2. **GEO优化**: 
