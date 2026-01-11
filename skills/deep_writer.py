@@ -74,6 +74,16 @@ class DeepWriteSkill(BaseSkill):
         brand = self.brand_config.get('brand', {})
         brand_name = brand.get('name', '盒艺家')
         
+        # 内链策略 (SEO PageRank 传递)
+        INTERNAL_LINKS = {
+            "专业知识": {"url": "/news/list-1.html", "anchor": "查看更多专业文章"},
+            "行业资讯": {"url": "/news/list-2.html", "anchor": "浏览行业动态"},
+            "产品介绍": {"url": "/news/list-3.html", "anchor": "探索更多产品"},
+            "CTA": {"url": "/contact.html", "anchor": "立即获取报价"}
+        }
+        category_link = INTERNAL_LINKS.get(category, INTERNAL_LINKS["行业资讯"])
+        cta_link = INTERNAL_LINKS["CTA"]
+        
         # 动态构造 RAG 指令
         rag_instruction = ""
         if rag_context:
@@ -123,8 +133,13 @@ class DeepWriteSkill(BaseSkill):
            - **alt 必须**: 15-30 个中文字符，包含核心关键词 (如: "东莞高端月饼礼盒定制包装效果图")。
            - **title 必须**: 品牌名 + 产品关键词 (如: "{brand_name} 月饼盒定制")。
            - english_keyword: 提取中文主题翻译为英文短语，用于图片生成。
-        4. **标题**: 必须严格控制在 16 字以内。
-        5. **格式**: 返回纯 JSON。
+        4. **内链 (SEO PageRank)**:
+           - 在正文中自然插入 2-3 个内链：
+           - 相关阅读: `<a href="{category_link['url']}">{category_link['anchor']}</a>`
+           - CTA转化: `<a href="{cta_link['url']}">{cta_link['anchor']}</a>`
+           - 链接文字要自然融入上下文，不可生硬堆砌。
+        5. **标题**: 必须严格控制在 16 字以内。
+        6. **格式**: 返回纯 JSON。
 
         {{
           "title": "标题...",
@@ -135,6 +150,13 @@ class DeepWriteSkill(BaseSkill):
           "description": "...",
           "tags": "...",
           "schema_faq": [],
+          "article_schema": {{
+            "@type": "Article",
+            "headline": "同title",
+            "author": {{"@type": "Organization", "name": "{brand_name}"}},
+            "publisher": {{"@type": "Organization", "name": "{brand_name}", "logo": "https://heyijiapack.com/logo.png"}},
+            "image": "文章首图URL"
+          }},
           "one_line_summary": "...",
           "key_points": ["要点1", "要点2"]
         }}
