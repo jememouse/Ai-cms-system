@@ -13,6 +13,7 @@ __pycache__/
 # Project Data
 trends_data.json
 generated_seo_data.json
+published_assets.json
 n8n_data/
 publish_config.json
 .cache/
