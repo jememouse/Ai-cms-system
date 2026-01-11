@@ -149,14 +149,10 @@ class DeepWriteSkill(BaseSkill):
         1. **结构**: 
            - 定义式开头 -> 目录(TOC) -> 核心要点(blockquote) -> 正文(含表格) -> 一句话总结 -> FAQ -> 品牌签名。
            - 所有 H2/H3 标题必须带 id 属性 (如: `<h2 id="material-selection">材质选择</h2>`)，用于目录锚点。
-           - **品牌签名**必须包含:
+           - **品牌签名** (简洁版):
              ```html
              <div class="brand-signature">
-               <p><strong>{brand_info['slogan']}</strong></p>
-               <p>✅ {' · '.join(brand_info['usps'][:3])}</p>
-               <p>📊 服务企业{brand_info['stats']['服务企业']} | 客户满意度{brand_info['stats']['客户满意度']} | {brand_info['stats']['行业经验']}行业经验</p>
-               <p>📞 {brand_info['phone']} | 📧 {brand_info['email']}</p>
-               <p><a href="https://heyijiapack.com/product">👉 {brand_info['contact_cta']}</a></p>
+               <p><strong>{brand_info['slogan']}</strong> | 📞 {brand_info['phone']} | <a href="https://heyijiapack.com/product">👉 {brand_info['contact_cta']}</a></p>
              </div>
              ```
         2. **GEO优化**: 
