@@ -77,7 +77,7 @@ class WellCMSPublisher:
         if self.playwright:
             self.playwright.stop()
     
-    def _safe_goto(self, url: str, wait_until: str = "domcontentloaded", timeout: int = 30000, retries: int = 2) -> bool:
+    def _safe_goto(self, url: str, wait_until: str = "domcontentloaded", timeout: int = 30000, retries: int = 3) -> bool:
         """
         安全的页面导航，统一处理 ERR_ABORTED 等网络问题
         
@@ -93,19 +93,29 @@ class WellCMSPublisher:
         for attempt in range(retries + 1):
             try:
                 self.page.goto(url, wait_until=wait_until, timeout=timeout)
-                time.sleep(1)  # 短暂等待确保页面稳定
+                time.sleep(2)  # 等待页面稳定
                 return True
             except Exception as e:
-                if attempt < retries:
-                    print(f"      ⚠️ 导航失败 ({attempt + 1}/{retries + 1}): {e}")
-                    time.sleep(2)  # 等待后重试
-                else:
-                    print(f"      ❌ 导航最终失败: {e}")
-                    # 检查是否已在目标页面
-                    if url.split("?")[0] in self.page.url:
-                        print(f"      ℹ️ 已在目标页面，继续执行")
-                        return True
+                error_msg = str(e)
+                print(f"      ⚠️ 导航失败 ({attempt + 1}/{retries + 1}): {error_msg[:100]}")
+                
+                # 检查是否已在目标页面 (精确匹配完整 URL)
+                current_url = self.page.url
+                # 移除末尾斜杠进行比较
+                if current_url.rstrip('/') == url.rstrip('/'):
+                    print(f"      ℹ️ 已在目标页面，继续执行")
+                    return True
+                
+                # 最后一次重试也失败了
+                if attempt >= retries:
+                    print(f"      ❌ 导航最终失败，当前页面: {current_url}")
                     return False
+                
+                # 在重试前等待更长时间 (网络可能有波动)
+                wait_time = 3 + attempt * 2  # 3s, 5s, 7s...
+                print(f"      ⏳ 等待 {wait_time}s 后重试...")
+                time.sleep(wait_time)
+        
         return False
     
     def _login(self) -> bool:
@@ -184,6 +194,7 @@ class WellCMSPublisher:
                  
             if "admin" in current_url and "login" not in current_url:
                 print("      ✅ [Result] 登录成功")
+                time.sleep(3)  # 等待 session 完全建立
                 return True
             else:
                 print(f"      ❌ [Result] 登录失败 ({current_url})")
@@ -196,9 +207,11 @@ class WellCMSPublisher:
     def _publish_article(self, article: Dict) -> Tuple[bool, str]:
         """发布文章"""
         try:
-            # 导航到发布页面
+            # 导航到发布页面 (增加等待确保后台登录 session 稳定)
+            time.sleep(2)
             if not self._safe_goto(self.post_url):
                 return False, ""
+            time.sleep(2)  # 等待页面完全加载
             
             # 填写标题
             # 填写标题
