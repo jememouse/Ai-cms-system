@@ -100,6 +100,13 @@ def run(config_file: str = None):
     accounts = publish_config.get("accounts", [])
     default_interval = publish_config.get("default_interval_minutes", 1)
     
+    # 获取 Schema 配置 (默认: FAQ开启, Article关闭以避免冲突)
+    schema_config = publish_config.get("schema_config", {})
+    inject_faq = schema_config.get("inject_faq_schema", True)
+    inject_article = schema_config.get("inject_article_schema", False)
+    
+    print(f"⚙️ Schema 配置: FAQ={inject_faq}, Article={inject_article}")
+    
     if not accounts:
         print("⚠️ 没有配置任何账号")
         return
@@ -157,65 +164,72 @@ def run(config_file: str = None):
                 schema_faq_raw = record.get("schema_faq", "")
                 schema_faq = []
                 
-                # 解析 schema_faq (可能是 JSON 字符串或列表)
-                if schema_faq_raw:
-                    if isinstance(schema_faq_raw, str):
-                        try:
-                            schema_faq = json.loads(schema_faq_raw)
-                        except json.JSONDecodeError:
-                            schema_faq = []
-                    elif isinstance(schema_faq_raw, list):
-                        schema_faq = schema_faq_raw
-                
-                if schema_faq and isinstance(schema_faq, list) and len(schema_faq) > 0:
-                    # 构建 FAQ Schema JSON-LD
-                    faq_schema = {
-                        "@context": "https://schema.org",
-                        "@type": "FAQPage",
-                        "mainEntity": [
-                            {
-                                "@type": "Question",
-                                "name": q.get("question", ""),
-                                "acceptedAnswer": {
-                                    "@type": "Answer",
-                                    "text": q.get("answer", "")
+                # 1. FAQ Schema (可配置开关)
+                if inject_faq:
+                    # 解析 schema_faq (可能是 JSON 字符串或列表)
+                    if schema_faq_raw:
+                        if isinstance(schema_faq_raw, str):
+                            try:
+                                schema_faq = json.loads(schema_faq_raw)
+                            except json.JSONDecodeError:
+                                schema_faq = []
+                        elif isinstance(schema_faq_raw, list):
+                            schema_faq = schema_faq_raw
+                    
+                    if schema_faq and isinstance(schema_faq, list) and len(schema_faq) > 0:
+                        # 构建 FAQ Schema JSON-LD
+                        faq_schema = {
+                            "@context": "https://schema.org",
+                            "@type": "FAQPage",
+                            "mainEntity": [
+                                {
+                                    "@type": "Question",
+                                    "name": q.get("question", ""),
+                                    "acceptedAnswer": {
+                                        "@type": "Answer",
+                                        "text": q.get("answer", "")
+                                    }
                                 }
-                            }
-                            for q in schema_faq if isinstance(q, dict) and q.get("question")
-                        ]
-                    }
-                    # 注入到 HTML 末尾
-                    schema_script = f'<script type="application/ld+json">{json.dumps(faq_schema, ensure_ascii=False)}</script>'
-                    html_content = html_content + "\n" + schema_script
-                    print("      📊 已注入 FAQ Schema")
-                
-                # === Article Schema 注入 ===
-                from datetime import datetime
-                article_schema = {
-                    "@context": "https://schema.org",
-                    "@type": "Article",
-                    "headline": title,
-                    "author": {
-                        "@type": "Organization",
-                        "name": "盒艺家技术团队",
-                        "url": "https://heyijiapack.com/"
-                    },
-                    "publisher": {
-                        "@type": "Organization",
-                        "name": "盒艺家",
-                        "logo": {
-                            "@type": "ImageObject",
-                            "url": "https://heyijiapack.com/logo.png"
+                                for q in schema_faq if isinstance(q, dict) and q.get("question")
+                            ]
                         }
-                    },
-                    "datePublished": datetime.now().strftime("%Y-%m-%d"),
-                    "dateModified": datetime.now().strftime("%Y-%m-%d"),
-                    "description": record.get("description", "")[:160],
-                    "keywords": record.get("keywords", "")
-                }
-                article_schema_script = f'<script type="application/ld+json">{json.dumps(article_schema, ensure_ascii=False)}</script>'
-                html_content = html_content + "\n" + article_schema_script
-                print("      📰 已注入 Article Schema")
+                        # 注入到 HTML 末尾
+                        schema_script = f'<script type="application/ld+json">{json.dumps(faq_schema, ensure_ascii=False)}</script>'
+                        html_content = html_content + "\n" + schema_script
+                        print("      📊 已注入 FAQ Schema")
+                else:
+                     print("      ⏩ 跳过 FAQ Schema (配置已禁用)")
+
+                # === Article Schema 注入 (可配置开关) ===
+                if inject_article:
+                    from datetime import datetime
+                    article_schema = {
+                        "@context": "https://schema.org",
+                        "@type": "Article",
+                        "headline": title,
+                        "author": {
+                            "@type": "Organization",
+                            "name": "盒艺家技术团队",
+                            "url": "https://heyijiapack.com/"
+                        },
+                        "publisher": {
+                            "@type": "Organization",
+                            "name": "盒艺家",
+                            "logo": {
+                                "@type": "ImageObject",
+                                "url": "https://heyijiapack.com/logo.png"
+                            }
+                        },
+                        "datePublished": datetime.now().strftime("%Y-%m-%d"),
+                        "dateModified": datetime.now().strftime("%Y-%m-%d"),
+                        "description": record.get("description", "")[:160],
+                        "keywords": record.get("keywords", "")
+                    }
+                    article_schema_script = f'<script type="application/ld+json">{json.dumps(article_schema, ensure_ascii=False)}</script>'
+                    html_content = html_content + "\n" + article_schema_script
+                    print("      📰 已注入 Article Schema")
+                else:
+                    print("      ⏩ 跳过 Article Schema (配置已禁用)")
                 
                 # === 内容质量检测 ===
                 # 清理 HTML 标签获取纯文本
