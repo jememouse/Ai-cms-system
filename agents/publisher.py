@@ -11,13 +11,13 @@ class PublisherAgent(BaseAgent):
     智能体: 发布员
     职责: 负责将生成好的内容发布到 CMS 系统
     """
-    def __init__(self):
+    def __init__(self, username: str = None, password: str = None):
         super().__init__(
             name="Publisher",
             role="发布专员",
             description="负责文章上架、封面图上传、排版检查"
         )
-        self.add_skill(WellCMSPublishSkill())
+        self.add_skill(WellCMSPublishSkill(username=username, password=password))
 
     def publish_article(self, article_data: Dict) -> str:
         """

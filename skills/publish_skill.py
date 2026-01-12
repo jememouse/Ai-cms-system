@@ -11,12 +11,12 @@ class WellCMSPublishSkill(BaseSkill):
     """
     技能: 将文章发布到 WellCMS (Playwright RPA)
     """
-    def __init__(self):
+    def __init__(self, username: str = None, password: str = None):
         super().__init__(
             name="wellcms_publish",
             description="自动登录 WellCMS 后台并发布文章，处理封面图和 SEO 字段"
         )
-        self.publisher = WellCMSPublisher()
+        self.publisher = WellCMSPublisher(username=username, password=password)
 
     def execute(self, input_data: Dict) -> Dict:
         """

@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import json
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -9,12 +10,52 @@ from shared.feishu_client import FeishuClient
 from shared import config
 from shared import stats
 
+
+def load_publish_config():
+    """加载发布配置 (优先环境变量，其次本地文件)"""
+    # 1. 尝试从环境变量加载 (用于 GitHub Actions Secret)
+    config_json = os.getenv("PUBLISH_CONFIG_JSON")
+    if config_json:
+        try:
+            print("🔐 读取环境变量配置: PUBLISH_CONFIG_JSON")
+            return json.loads(config_json)
+        except json.JSONDecodeError as e:
+            print(f"⚠️ 解析环境变量配置失败: {e}")
+    
+    # 2. 尝试从文件加载
+    if os.path.exists(config.PUBLISH_CONFIG_FILE):
+        try:
+            with open(config.PUBLISH_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                print(f"📖 读取本地配置文件: {config.PUBLISH_CONFIG_FILE}")
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ 读取配置文件失败: {e}")
+            
+    print(f"⚠️ 未找到有效配置")
+    return None
+
+
 def run():
     print("\n" + "=" * 50)
     print("🤖 启动 Agentic Workflow (Step 3: Publishing)")
     print("=" * 50 + "\n")
     
-    agent = PublisherAgent()
+    # 加载配置获取账号信息
+    publish_config = load_publish_config()
+    accounts = publish_config.get("accounts", []) if publish_config else []
+    
+    # 使用第一个账号 (单账号模式)
+    if accounts:
+        first_account = accounts[0]
+        username = first_account.get("username")
+        password = first_account.get("password")
+        print(f"👤 使用账号: {username}")
+    else:
+        username = None
+        password = None
+        print("⚠️ 未找到账号配置，将使用默认值")
+    
+    agent = PublisherAgent(username=username, password=password)
     client = FeishuClient()
     
     total_success = 0
