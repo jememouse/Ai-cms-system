@@ -128,26 +128,38 @@ class WellCMSPublisher:
                     # 确保清楚可能存在的旧值（如果有）
                     self.page.fill('input[type=password]', self.password)
                     
-                    # 尝试点击提交，比回车更稳
-                    submit_btn = self.page.query_selector('button[type="submit"]') or \
-                                 self.page.query_selector('input[type="submit"]') or \
-                                 self.page.query_selector('#submit')
+                    # 策略A: 优先尝试回车 (最稳妥，避免并在点到页面顶部的搜索按钮)
+                    print("      ⌨️ [Step 2] 尝试回车提交...")
+                    self.page.keyboard.press('Enter')
+                    time.sleep(1) # 给一点反应时间
                     
-                    if submit_btn:
-                        print("      �️ [Step 2] 点击提交按钮...")
-                        with self.page.expect_navigation(timeout=15000):
-                             submit_btn.click()
-                    else:
-                        print("      ⌨️ [Step 2] 未找到按钮，尝试回车提交...")
-                        self.page.keyboard.press('Enter')
-                        time.sleep(3)
+                    # 策略B: 如果回车没反应（还在当前页且密码框还在），再尝试点按钮
+                    try:
+                        # 只有当 URL 还没变，且密码框还在时才尝试点击
+                        if "admin/index.php" in self.page.url and self.page.is_visible('input[type=password]'):
+                             print("      ⚠️ [Step 2] 回车未跳转，尝试点击按钮...")
+                             # 尝试定位紧邻的提交按钮 (避免误点全局搜索)
+                             # 假设结构是 form > div > input + button
+                             start_btn = self.page.locator('input[type=password]').locator('xpath=..').locator('button, input[type="submit"]').first
+                             if start_btn.count() > 0:
+                                 start_btn.click()
+                             else:
+                                 # 兜底：找页面上带"提交"或"登录"的按钮
+                                 self.page.get_by_text("提交").click()
+                    except:
+                        pass
                         
-                    print("      🔄 [Step 2] 页面已跳转")
+                    print("      🔄 [Step 2] 等待页面跳转...")
+                    self.page.wait_for_load_state("networkidle", timeout=15000)
             except Exception as e:
                 print(f"      ℹ️二次验证跳过或异常: {e}")
             
-            # 5. 最终验证
+            # 5. 最终验证 (加强版)
             current_url = self.page.url
+            # 如果跳到了 search 页面，说明误操作了
+            if "operate-search" in current_url:
+                 print(f"      ❌ 登录失败: 误触搜索功能 ({current_url})")
+                 return False
             if "login" in current_url:
                 print(f"      ❌ 登录失败: 仍在登录页 ({current_url})")
                 # 尝试打印页面上的错误提示
