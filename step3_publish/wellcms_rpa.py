@@ -286,7 +286,7 @@ class WellCMSPublisher:
                         
                         if target_frame:
                             # 直接写入 iframe body
-                            target_frame.evaluate(f"document.body.innerHTML = `{html_content.replace('`', '\`')}`")
+                            target_frame.evaluate(f"document.body.innerHTML = `{html_content.replace('`', '\\\\`')}`")
                             # 同步回 textarea (尝试触发编辑器的 sync)
                             self.page.evaluate("""() => {
                                 if (typeof UM !== 'undefined') UM.getEditor('message').sync();
@@ -320,7 +320,7 @@ class WellCMSPublisher:
             self.page.evaluate(f"""() => {{
                 var el = document.querySelector('textarea[name="message"]');
                 if (el) {{
-                    el.value = `{html_content.replace('`', '\`')}`;
+                    el.value = `{html_content.replace('`', '\\\\`')}`;
                 }}
             }}""")
             print("      🛡️ 已强制同步内容到 Textarea")
