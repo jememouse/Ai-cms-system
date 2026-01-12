@@ -5,10 +5,10 @@ import requests
 import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import config
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 
 def check_record():
-    client = FeishuClient()
+    client = GoogleSheetClient()
     # Record ID captured from the previous test run output (Step 1065)
     record_id = "recv7SraQA4cPx"
     

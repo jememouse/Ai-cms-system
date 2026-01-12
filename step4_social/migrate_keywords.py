@@ -2,12 +2,12 @@ import sys
 import os
 import requests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 
 def run():
     print("🚀 开始迁移旧关键词...")
-    client = FeishuClient()
+    client = GoogleSheetClient()
     # 临时覆盖 table_id 为 XHS 表
     client.table_id = config.FEISHU_XHS_TABLE_ID
     

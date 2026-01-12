@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from . import fetch_trends
 from . import generate_topics
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 import json
 
@@ -53,7 +53,7 @@ def run():
             "标题生成时间": item.get("created_at", "")
         })
     
-    client = FeishuClient()
+    client = GoogleSheetClient()
     
     # 分批上传
     batch_size = 50

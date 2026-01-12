@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.trend_hunter import TrendHunterAgent
@@ -55,10 +56,10 @@ def run():
         if new_count > 0:
             print(f"☁️ 正在同步 {new_count} 条新选题到飞书...")
             try:
-                from shared.feishu_client import FeishuClient
+                from shared.google_client import GoogleSheetClient
                 from shared import config
                 
-                client = FeishuClient()
+                client = GoogleSheetClient()
                 
                 # Check duplicates in Feishu (This is expensive, so we just try batch create and ignore errors or rely on Feishu logic? 
                 # Better: only upload what we determined as new locally)
@@ -73,11 +74,13 @@ def run():
                     # Check if this t was added. 
                     # We can re-use the logic: if t['Topic'] was not in existing_topics BEFORE update.
                     if t['Topic'] not in existing_topics:
+                        # Ensure we have a timestamp
+                        now_str = time.strftime("%Y-%m-%d %H:%M:%S")
                         record = {
                             "Topic": t['Topic'],
                             "大项分类": t['大项分类'],
                             "Status": config.STATUS_READY,
-                            "选题生成时间": t.get('created_at', '')
+                            "选题生成时间": t.get('created_at') or now_str # Handle empty string or missing key
                         }
                         upload_list.append(record)
                 

@@ -5,13 +5,13 @@ import time
 import random
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from step3_publish.wellcms_rpa import WellCMSPublisher
 from shared import config
 from datetime import datetime
 
 def run_test():
-    client = FeishuClient()
+    client = GoogleSheetClient()
     
     # 1. Create a unique test record
     timestamp = int(time.time())

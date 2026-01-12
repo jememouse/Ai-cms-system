@@ -5,7 +5,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.chief_editor import ChiefEditorAgent
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 
 def run():
@@ -15,7 +15,7 @@ def run():
     
     # Init
     editor = ChiefEditorAgent()
-    client = FeishuClient()
+    client = GoogleSheetClient()
     
     # Load Topics (From Feishu for Persistence)
     print("☁️ 正在从飞书拉取 Ready 状态的选题...")
@@ -41,15 +41,16 @@ def run():
     from collections import defaultdict
     grouped_topics = defaultdict(list)
     for t in pending_topics:
-        # Note: fetch_records_by_status returns dict with keys: record_id, topic, category...
-        # We need to map them to the format expected below or adjust below code
-        # The return dict keys are: record_id, topic, category, title, html_content...
-        # We need 'Topic', '大项分类'
+        # Note: GoogleSheetClient returns dict with keys matching headers: 'Topic', '大项分类'
+        # No need to map from lowercase 'topic'
         
-        # Mapping for compatibility
-        t['Topic'] = t['topic']
-        t['大项分类'] = t['category']
-        
+        # Ensure keys exist
+        if 'Topic' not in t:
+            t['Topic'] = t.get('topic', '') # Fallback
+            
+        if '大项分类' not in t:
+             t['大项分类'] = t.get('category', '未分类')
+
         cat = t.get('大项分类', '未分类')
         grouped_topics[cat].append(t)
     

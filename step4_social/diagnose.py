@@ -6,7 +6,7 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared import config
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 
 def check_llm():
     print("\n🔍 1. Testing LLM Connection...")
@@ -49,7 +49,7 @@ def check_llm():
 
 def check_main_table():
     print("\n🔍 2. Checking Main Table Fields (for XHS_Status)...")
-    client = FeishuClient()
+    client = GoogleSheetClient()
     print(f"   Base ID: {config.FEISHU_BASE_ID}")
     print(f"   Main Table ID: {config.FEISHU_TABLE_ID}")
     

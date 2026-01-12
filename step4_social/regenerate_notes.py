@@ -3,13 +3,13 @@ import os
 import requests
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 from step4_social.xhs_generator import XHSGenerator
 
 def run():
     print("🚀 开始重新生成笔记内容 (Regenerate)...")
-    client = FeishuClient()
+    client = GoogleSheetClient()
     generator = XHSGenerator()
     
     # 1. 先获取主表原文 (此时 client.table_id 是 Main Table)

@@ -29,12 +29,17 @@ else:
 FEISHU_APP_ID = os.getenv("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.getenv("FEISHU_APP_SECRET", "")
 FEISHU_BASE_ID = os.getenv("FEISHU_BASE_ID", "ROVGbzfTfaEGjosDkxHck65Cnmx")
-FEISHU_TABLE_ID = os.getenv("FEISHU_TABLE_ID", "tblxkLHxg9K3uHyp")
+FEISHU_TABLE_ID = "cms" # Mapped to Google Worksheet Name
 FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "https://open.feishu.cn/open-apis/bot/v2/hook/009c15b4-fb99-4eaa-82a7-f1a190083bfc")
 
+# Google Sheets Configuration
+GOOGLE_CREDENTIALS_FILE = os.path.join(PROJECT_ROOT, "service_account.json")
+GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID", "1EZePBUdlJa_nn_OVQJie4sFqgG4UxDJm56ZPah92eKY")
+GOOGLE_WORKSHEET_NAME = "cms" # Default
+
 # 小红书配置
-# 注意：这是新表的 ID，不是原来的主表 ID
-FEISHU_XHS_TABLE_ID = os.getenv("FEISHU_XHS_TABLE_ID", "tblf1DMg5p9HXcwD") 
+# 注意：映射为 Google Worksheet Name "xhs"
+FEISHU_XHS_TABLE_ID = "xhs"
 MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "10")) # 每日/单次运行最大生成数
 
 # WellCMS 配置

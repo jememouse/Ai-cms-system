@@ -6,10 +6,10 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 
-client = FeishuClient()
+client = GoogleSheetClient()
 
 # 获取一条 Pending 状态的记录查看内容长度
 records = client.fetch_records_by_status(config.STATUS_PENDING, limit=1)

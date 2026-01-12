@@ -8,7 +8,7 @@ from datetime import datetime # Added by instruction
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared import config
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from step4_social.xhs_generator import XHSGenerator
 
 def run():
@@ -21,7 +21,7 @@ def run():
         print("⚠️ 未配置 [FEISHU_XHS_TABLE_ID]，请先在 .env 或 config.py 中填入新表的 ID。")
         return
 
-    client = FeishuClient()
+    client = GoogleSheetClient()
     generator = XHSGenerator()
     
     # 获取每日限额

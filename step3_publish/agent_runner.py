@@ -6,7 +6,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.publisher import PublisherAgent
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 from shared import stats
 
@@ -56,7 +56,7 @@ def run():
         print("⚠️ 未找到账号配置，将使用默认值")
     
     agent = PublisherAgent(username=username, password=password)
-    client = FeishuClient()
+    client = GoogleSheetClient()
     
     total_success = 0
     total_fail = 0
@@ -74,17 +74,18 @@ def run():
     import random
     
     for idx, record in enumerate(pending_records):
-        print(f"\n--- [{idx + 1}/{len(pending_records)}] 发布: {record.get('title', '')[:30]}... ---")
+        print(f"\n--- [{idx + 1}/{len(pending_records)}] 发布: {record.get('Title', '')[:30]}... ---")
         
         # 转换为 Skill 需要的格式
+        # 转换为 Skill 需要的格式
         article_data = {
-            "title": record.get('title'),
-            "html_content": record.get('html_content'),
-            "category_id": config.CATEGORY_MAP.get(str(record.get('category', '')).strip(), "1"),
-            "summary": record.get('summary'),
-            "keywords": record.get('keywords'),
-            "description": record.get('description'),
-            "tags": record.get('tags')
+            "title": record.get('Title'),
+            "html_content": record.get('HTML_Content'),
+            "category_id": config.CATEGORY_MAP.get(str(record.get('大项分类', '')).strip(), "1"),
+            "summary": record.get('摘要'),
+            "keywords": record.get('关键词'),
+            "description": record.get('描述'),
+            "tags": record.get('Tags')
         }
         
         # 2. Agent 发布

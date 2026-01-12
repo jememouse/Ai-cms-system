@@ -6,10 +6,10 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared import config
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 
 def debug_fields():
-    client = FeishuClient()
+    client = GoogleSheetClient()
     table_id = config.FEISHU_XHS_TABLE_ID
     
     print(f"🕵️‍♂️ 正在检查表 [{table_id}] 的字段结构...")

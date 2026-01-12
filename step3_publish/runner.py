@@ -9,7 +9,7 @@ import json
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 from shared import stats
 from .wellcms_rpa import WellCMSPublisher
@@ -113,7 +113,7 @@ def run(config_file: str = None):
     
     print(f"📋 共 {len(accounts)} 个账号\n")
     
-    client = FeishuClient()
+    client = GoogleSheetClient()
     
     total_success = 0
     total_fail = 0

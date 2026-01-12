@@ -7,12 +7,12 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from shared import config
 import time
 
 def reset_pending_to_ready():
-    client = FeishuClient()
+    client = GoogleSheetClient()
     
     # 1. 获取所有 Pending 记录
     print("🔍 正在查找 Pending 状态的记录...")

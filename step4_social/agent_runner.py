@@ -6,7 +6,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared import config
-from shared.feishu_client import FeishuClient
+from shared.google_client import GoogleSheetClient
 from agents.social_manager import SocialManagerAgent
 
 def run():
@@ -15,7 +15,7 @@ def run():
     print("=" * 50 + "\n")
 
     # 1. 初始化基础设施
-    client = FeishuClient()
+    client = GoogleSheetClient()
     agent = SocialManagerAgent() # 我们的主角
     
     daily_limit = config.MAX_DAILY_XHS
@@ -34,12 +34,12 @@ def run():
             break
 
         # 检查状态
-        xhs_status = record.get("xhs_status", "")
+        xhs_status = record.get("XHS_Status", "")
         if xhs_status == "Done":
              continue
              
-        article_title = record.get("title", "无标题")
-        article_content = record.get("html_content", "")
+        article_title = record.get("Title", "无标题")
+        article_content = record.get("HTML_Content", "")
         
         if not article_content:
             continue
@@ -68,7 +68,7 @@ def run():
             res_id = client.create_record(new_record, table_id=config.FEISHU_XHS_TABLE_ID)
             
             if res_id:
-                print(f"   💾 [System] 已保存至飞书 (ID: {res_id})")
+                print(f"   💾 [System] 已保存至 Google Sheets (ID: {res_id})")
                 client.update_record(record['record_id'], {"XHS_Status": "Done"})
                 count_generated += 1
             else:

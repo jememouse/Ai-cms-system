@@ -5,7 +5,7 @@ import requests
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from shared import config, feishu_client
+from shared import config, google_client
 
 def get_feishu_count(client, status):
     url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{client.base_id}/tables/{client.table_id}/records/search"
@@ -40,7 +40,7 @@ def main():
     print(f"1️⃣  Step 1 (Generated Titles/Topics): {step1_count}")
 
     # 2. Feishu Status
-    client = feishu_client.FeishuClient()
+    client = google_client.GoogleSheetClient()
     
     ready_count = get_feishu_count(client, "Ready")
     pending_count = get_feishu_count(client, "Pending")
