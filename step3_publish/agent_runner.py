@@ -69,8 +69,8 @@ def run():
         
         # Random Interval
         if idx < len(pending_records) - 1:
-            # Optimization: 60-120s for SEO safety
-            wait_time = random.uniform(60, 120)
+            # Optimization: speed up for testing (5-15s)
+            wait_time = random.uniform(5, 15)
             print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
             time.sleep(wait_time)
 
