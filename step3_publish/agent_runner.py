@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.publisher import PublisherAgent
 from shared.feishu_client import FeishuClient
 from shared import config
+from shared import stats
 
 def run():
     print("\n" + "=" * 50)
@@ -15,6 +16,9 @@ def run():
     
     agent = PublisherAgent()
     client = FeishuClient()
+    
+    total_success = 0
+    total_fail = 0
     
     # 1. 获取待发布文章 (Status='Pending')
     print("🔍 [System] 正在扫描待发布文章...")
@@ -56,6 +60,12 @@ def run():
             
             # 4. Asset Write-back (SEO Closed Loop)
             _record_to_assets(article_data, published_url)
+            
+            total_success += 1
+            stats.record_published()
+        else:
+            total_fail += 1
+            stats.record_failed()
         
         # Random Interval
         if idx < len(pending_records) - 1:
@@ -63,6 +73,15 @@ def run():
             wait_time = random.uniform(60, 120)
             print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
             time.sleep(wait_time)
+
+    # 发送飞书通知
+    if total_success > 0 or total_fail > 0:
+        notify_content = f"**发布结果**\n- ✅ 成功: {total_success} 篇\n- ❌ 失败: {total_fail} 篇\n- ⏰ 时间: {time.strftime('%Y-%m-%d %H:%M')}\n\n{stats.get_summary()}"
+        client.send_notification(
+            title="📤 CMS 发布任务完成",
+            content=notify_content
+        )
+        print(f"📢 已发送飞书通知 (成功: {total_success}, 失败: {total_fail})")
 
 def _record_to_assets(article, url):
     """
