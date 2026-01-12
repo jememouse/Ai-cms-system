@@ -114,8 +114,18 @@ class WellCMSPublisher:
             # ==================================================================
             # Step 2: 后台二次验证
             # ==================================================================
+            # 修复: 等待登录跳转完成，避免 ERR_ABORTED
+            import time
+            time.sleep(2)
+            
             print(f"      📍 [Step 2] 强制访问后台: {self.admin_url}")
-            self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
+            try:
+                # 使用 domcontentloaded 替代 networkidle，更快且更稳定
+                self.page.goto(self.admin_url, wait_until="domcontentloaded", timeout=30000)
+            except Exception as goto_err:
+                print(f"      ⚠️ [Step 2] goto 异常: {goto_err}")
+                # 可能已经在目标页面了，继续检查
+                time.sleep(1)
             
             # 检查是否被踢回
             if "user-login" in self.page.url:
