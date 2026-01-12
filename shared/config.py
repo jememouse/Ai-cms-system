@@ -35,7 +35,7 @@ FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "https://open.feishu.cn/ope
 # 小红书配置
 # 注意：这是新表的 ID，不是原来的主表 ID
 FEISHU_XHS_TABLE_ID = os.getenv("FEISHU_XHS_TABLE_ID", "tblf1DMg5p9HXcwD") 
-MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "180")) # 每日/单次运行最大生成数
+MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "10")) # 每日/单次运行最大生成数
 
 # WellCMS 配置
 WELLCMS_USERNAME = os.getenv("WELLCMS_USERNAME", "product_manager")
