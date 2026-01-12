@@ -172,8 +172,12 @@ class WellCMSPublisher:
     def _publish_article(self, article: Dict) -> Tuple[bool, str]:
         """发布文章"""
         try:
-            # 导航到发布页面
-            self.page.goto(self.post_url, timeout=60000, wait_until="networkidle")
+            # 导航到发布页面 (修复 ERR_ABORTED)
+            try:
+                self.page.goto(self.post_url, timeout=30000, wait_until="domcontentloaded")
+            except Exception as goto_err:
+                print(f"      ⚠️ 发布页面 goto 异常: {goto_err}")
+                # 继续检查是否已在目标页
             time.sleep(2)
             
             # 填写标题
