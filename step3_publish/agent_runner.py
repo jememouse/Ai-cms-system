@@ -80,7 +80,7 @@ def run():
         article_data = {
             "title": record.get('title'),
             "html_content": record.get('html_content'),
-            "category_id": config.CATEGORY_MAP.get(record.get('category'), "1"),
+            "category_id": config.CATEGORY_MAP.get(str(record.get('category', '')).strip(), "1"),
             "summary": record.get('summary'),
             "keywords": record.get('keywords'),
             "description": record.get('description'),

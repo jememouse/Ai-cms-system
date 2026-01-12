@@ -109,15 +109,8 @@ class FeishuClient:
                 else:
                     topic = str(topic_field) if topic_field else ""
                 
-                # 处理分类字段（可能是字符串或列表）
-                category_field = fields.get("大项分类", "行业资讯")
-                if isinstance(category_field, list) and len(category_field) > 0:
-                    category = category_field[0] if isinstance(category_field[0], str) else str(category_field[0])
-                else:
-                    category = str(category_field) if category_field else "行业资讯"
-                
-                # 辅助函数：处理飞书富文本字段
-                def parse_text_field(field_value):
+                # 定义辅助函数：处理飞书富文本/单选字段
+                def parse_field_value(field_value):
                     if not field_value:
                         return ""
                     if isinstance(field_value, str):
@@ -127,25 +120,30 @@ class FeishuClient:
                         if isinstance(first, dict):
                             return first.get("text", "")
                         return str(first)
+                    if isinstance(field_value, dict):
+                        return field_value.get("text", str(field_value))
                     return str(field_value)
-                
+
+                # 处理分类字段
+                category_raw = fields.get("大项分类", "行业资讯")
+                category = parse_field_value(category_raw)
                 results.append({
                     "record_id": item.get("record_id"),
                     "topic": topic,
                     "category": category,
-                    "title": parse_text_field(fields.get("Title", "")),
-                    "html_content": parse_text_field(fields.get("HTML_Content", "")),
-                    "summary": parse_text_field(fields.get("摘要", "")),
-                    "keywords": parse_text_field(fields.get("关键词", "")),
-                    "description": parse_text_field(fields.get("描述", "")),
-                    "tags": parse_text_field(fields.get("Tags", "")),
+                    "title": parse_field_value(fields.get("Title", "")),
+                    "html_content": parse_field_value(fields.get("HTML_Content", "")),
+                    "summary": parse_field_value(fields.get("摘要", "")),
+                    "keywords": parse_field_value(fields.get("关键词", "")),
+                    "description": parse_field_value(fields.get("描述", "")),
+                    "tags": parse_field_value(fields.get("Tags", "")),
                     # 新增字段 (GEO 优化) - 文本类型，存储 JSON 字符串
-                    "schema_faq": parse_text_field(fields.get("Schema_FAQ", "")),
-                    "one_line_summary": parse_text_field(fields.get("One_Line_Summary", "")),
-                    "key_points": parse_text_field(fields.get("Key_Points", "")),
-                    "url": parse_text_field(fields.get("URL", "")),
-                    "published_at": parse_text_field(fields.get("发布时间", "")),
-                    "xhs_status": parse_text_field(fields.get("XHS_Status", "")), # 新增状态字段
+                    "schema_faq": parse_field_value(fields.get("Schema_FAQ", "")),
+                    "one_line_summary": parse_field_value(fields.get("One_Line_Summary", "")),
+                    "key_points": parse_field_value(fields.get("Key_Points", "")),
+                    "url": parse_field_value(fields.get("URL", "")),
+                    "published_at": parse_field_value(fields.get("发布时间", "")),
+                    "xhs_status": parse_field_value(fields.get("XHS_Status", "")), # 新增状态字段
                 })
             
             total = data.get("data", {}).get("total", 0)
