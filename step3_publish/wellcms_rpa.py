@@ -36,7 +36,9 @@ class WellCMSPublisher:
     def _init_browser(self):
         """初始化浏览器"""
         self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(headless=True)
+        # 支持通过环境变量控制 Headless (方便本地调试)
+        is_headless = os.getenv("HEADLESS", "true").lower() == "true"
+        self.browser = self.playwright.chromium.launch(headless=is_headless)
         self.page = self.browser.new_page()
     
     def _close_browser(self):
