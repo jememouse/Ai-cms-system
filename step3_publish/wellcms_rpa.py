@@ -76,7 +76,23 @@ class WellCMSPublisher:
                 self.page.keyboard.press('Enter')
                 time.sleep(5)
             
-            print("   ✅ WellCMS 登录成功")
+            # 验证登录结果
+            time.sleep(3)
+            current_url = self.page.url
+            if "login" in current_url:
+                print(f"   ❌ 登录验证失败: 仍在登录页 ({current_url})")
+                return False
+                
+            # 再次检查是否有密码框 (说明密码错误或未跳转)
+            if self.page.query_selector('input[type=password]'):
+                 print("   ❌ 登录验证失败: 后台密码框仍存在 (可能密码错误)")
+                 return False
+                 
+            # 检查是否有后台特征 (如: 退出按钮, 菜单)
+            if "admin" not in current_url:
+                 print(f"   ⚠️ 警告: URL 不包含 admin ({current_url})")
+
+            print("   ✅ WellCMS 登录成功 (已验证)")
             return True
             
         except Exception as e:
@@ -91,7 +107,18 @@ class WellCMSPublisher:
             time.sleep(2)
             
             # 填写标题
-            self.page.fill('#subject', article.get('title', ''))
+            # 填写标题
+            try:
+                self.page.fill('#subject', article.get('title', ''), timeout=30000)
+            except Exception as e:
+                print(f"      ❌ 填写标题失败: {e}")
+                print(f"      📄 当前页面: {self.page.title()}")
+                print(f"      🔗 当前URL: {self.page.url}")
+                # 尝试保存截图 (CI/CD Artifacts 无法直接看，但本地调试有用)
+                try: 
+                    self.page.screenshot(path="error_publish_fail.png") 
+                except: pass
+                raise e
             
             # 选择分类
             category_id = article.get('category_id', '1')
