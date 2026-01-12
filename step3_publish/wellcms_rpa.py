@@ -118,7 +118,13 @@ class WellCMSPublisher:
             print(f"      🔗 跳转后台: {self.admin_url}")
             self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
             
+            # 🚨 关键检查：如果此时跳回了登录页，说明登录完全失败，不用再试二次密码了
+            if "login" in self.page.url:
+                 print(f"      ❌ 跳转后台失败，被重定向回登录页 ({self.page.url})")
+                 return False
+
             # 4. 检查是否遇到后台二次密码
+            # 只有当不在登录页时，才检测这个，防止误判
             try:
                 if self.page.wait_for_selector('input[type=password]', state="visible", timeout=3000):
                     print("      🔐 检测到后台二次密码，正在填写...")
