@@ -15,34 +15,36 @@ class XHSGenerator:
         self.api_url = config.LLM_API_URL
         self.model = config.LLM_MODEL
         
-        # 定义核心 Prompt
-        self.SYSTEM_PROMPT = """你是一个在包装行业深耕10年的资深采购经理，人设是“犀利、懂行、爱分享”。
-你的目标是将枯燥的行业知识，转化为小红书平台爆火的“种草/避坑”笔记。
+        # 定义 4 种差异化人设 (Personas)
+        self.STYLES = {
+            "insider": {
+                "role": "行业老炮 (The Insider)",
+                "tone": "揭秘、犀利、警告",
+                "instruction": """这里是包装行业的'内幕揭秘'现场。你的语气要像一个老行家在警告新人，多用'千万别'、'听句劝'，不讲废话，只讲干货。重点通过'避坑'来带出产品优势。"""
+            },
+            "bestie": {
+                "role": "种草闺蜜 (The Bestie)",
+                "tone": "情绪化、热情、夸张",
+                "instruction": """你是一个爱分享的种草博主。语气要超级激动，多用 Emoji (✨💖🔥)，像发现新大陆一样跟姐妹们分享。多用感叹号，重点强调'颜值'、'仪式感'和'开箱体验'。"""
+            },
+            "boss": {
+                "role": "精明老板 (The Boss)",
+                "tone": "理性、数据驱动、省钱",
+                "instruction": """你是一个精打细算的老板。只关心'性价比'、'转化率'和'成本控制'。用数据说话，告诉大家怎么用最少的钱做出最高级的包装。风格要专业但接地气，直击B2B痛点。"""
+            },
+            "artist": {
+                "role": "美学设计师 (The Artist)",
+                "tone": "高冷、极简、诗意",
+                "instruction": """你是一个追求极致美学的设计师。文字要少而精，注重排版留白。多谈'质感'、'触感'、'视觉语言'。语气要高冷一点，不屑于谈价格，只谈品味。"""
+            }
+        }
 
-请遵循 [K.E.E.P] 创作公式：
-1. K (Keywords): 标题必须包含痛点关键词（如“被坑哭”、“血泪教训”、“老板必看”）。
-2. E (Emoji): 全文 Emoji 含量 > 15%，每段开头必须用 Emoji 下沉。
-3. E (Emotion): 情绪价值拉满，不要讲课，要像闺蜜一样吐槽或安利。
-4. P (Call to Action): 结尾引导评论或私信。
-
-语言风格：
-- 拒绝爹味，拒绝教科书式的废话。
-- 多用短句，多用感叹号！
-- 加上 #标签。
-"""
-
-    def _call_llm(self, prompt: str) -> str:
-        """调用 LLM (复用 Step 2 的逻辑)"""
+    def _call_llm(self, prompt: str, system_prompt: str) -> str:
+        """调用 LLM"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        if "deepseek" in self.api_url:
-             headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-        # OpenRouter needs extra headers
         if "openrouter" in self.api_url:
             headers["HTTP-Referer"] = "https://github.com/jememouse/deepseek-feisu-cms"
             headers["X-Title"] = "DeepSeek CMS"
@@ -50,17 +52,18 @@ class XHSGenerator:
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "temperature": 1.3  # 小红书需要高创造性
+            "temperature": 1.3  # 高创造性
         }
         
         try:
-            # config.LLM_API_URL 已经是完整路径 (e.g. .../chat/completions)
             resp = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
             if resp.status_code == 200:
-                return resp.json()['choices'][0]['message']['content']
+                content = resp.json()['choices'][0]['message']['content']
+                if not content: return ""
+                return content
             else:
                 print(f"❌ LLM Error: {resp.status_code} - {resp.text}")
                 return ""
@@ -70,33 +73,51 @@ class XHSGenerator:
 
     def generate_note(self, title: str, content: str) -> dict:
         """生成小红书笔记"""
-        print(f"   ✍️ 正在将文章重写为小红书风格: {title}...")
+        import random
         
-        # 截取前 2000 字作为上下文，避免 token 溢出
+        # 1. 随机选择一种风格
+        style_key = random.choice(list(self.STYLES.keys()))
+        style = self.STYLES[style_key]
+        
+        print(f"   ✍️ 正在重写为小红书风格: {title}")
+        print(f"      🎭 本次人设: {style['role']} ({style['tone']})")
+        
+        # 截取前 2000 字
         context = content[:2000] + "..."
         
+        system_prompt = f"""你现在是：{style['role']}。
+核心人设指令：
+{style['instruction']}
+
+通用规则 [K.E.E.P]:
+1. 关键词(Keywords)要痛点密集。
+2. Emoji 含量 > 15%，作为视觉锚点。
+3. 结尾要有互动钩子。
+"""
+
         prompt = f"""
-请将以下长文章改写为一篇小红书笔记。
+请将以下长文章改写为一篇完全符合你当前人设的小红书笔记。
 
 【原始文章标题】: {title}
 【原始文章内容】: 
 {context}
 
 ---
-【要求】
-1. 输出格式必须是 JSON，包含 'title' 和 'content' 和 'keywords' 三个字段。
-2. 'title': 20字以内，极其吸睛。
-3. 'content': 900字以内，分段清晰。
-4. 'keywords': 提取 5 个适合做标签的关键词 (e.g. "包装设计", "创业搞钱")。
+【严格限制】
+1. **标题**: 必须在 **18个字以内**！严禁超时！必须极其吸睛！
+2. **正文**: 必须在 **850字以内**！严禁超时！
+3. **结构**: 必须根据你的人设 ({style['role']}) 调整叙述结构。严禁使用千篇一律的 "今天给大家分享..." 开头。
+4. **差异化**: 你的每一次输出都必须独一无二，不要雷同。
+5. **输出格式**: 仅返回 JSON。
 
-返回示例:
+返回 JSON 示例:
 {{
   "title": "...",
   "content": "...",
   "keywords": "..."
 }}
 """
-        result = self._call_llm(prompt)
+        result = self._call_llm(prompt, system_prompt)
         
         # 清洗 Markdown 标记
         result = result.replace("```json", "").replace("```", "").strip()
