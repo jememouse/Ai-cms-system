@@ -96,8 +96,8 @@ class TopicAnalysisSkill(BaseSkill):
         res = self._call_deepseek(prompt)
         analyzed_trends = res if isinstance(res, list) else []
         
-        # === Fallback: 确保数量达标 (24个) ===
-        target_count = 24
+        # === Fallback: 确保数量达标 (20个) ===
+        target_count = 20
         if len(analyzed_trends) < target_count:
             print(f"⚠️ [Topics] LLM仅返回 {len(analyzed_trends)} 个 (目标{target_count})，启动自动补全...")
             import random
@@ -136,9 +136,9 @@ class TopicAnalysisSkill(BaseSkill):
         背景：{brand_name} (既接B2B大单，也接B2C小单，**1个起订**)
         热点：{topic} (角度: {angle})
         
-        任务：生成 5 个高点击率 Title。
+        任务：生成 6 个高点击率 Title。
         要求：
-        1. **混合策略**：生成的5个标题中，至少有2个体现 "小批量/定制/个性化" 等 B2C 痛点，其余体现 B2B 专业性。
+        1. **混合策略**：生成的6个标题中，必须严格按照 **2个专业知识 + 2个行业资讯 + 2个产品介绍** 的比例分配。至少有2个体现 "小批量/定制/个性化" 等 B2C 痛点，其余体现 B2B 专业性。
         2. 2026年，**严格控制在 16 个字符以内 (按双字节汉字计算)**。
         3. 绝大部分不要出现品牌词。
         4. 必须覆盖以下3种分类风格，并**随机(10-20%概率)插入“案例/故事”类标题**：
@@ -151,8 +151,11 @@ class TopicAnalysisSkill(BaseSkill):
         返回 JSON:
         [
             {{"title": "标题1", "category": "专业知识"}},
-            {{"title": "某店主逆袭故事...", "category": "产品介绍"}},
-            ...
+            {{"title": "标题2", "category": "专业知识"}},
+            {{"title": "标题3", "category": "行业资讯"}},
+            {{"title": "标题4", "category": "行业资讯"}},
+            {{"title": "标题5", "category": "产品介绍"}},
+            {{"title": "标题6", "category": "产品介绍"}}
         ]
         """
         res = self._call_deepseek(prompt)
