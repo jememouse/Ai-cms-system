@@ -178,7 +178,7 @@ class DeepWriteSkill(BaseSkill):
            - 相关阅读: `<a href="{category_link['url']}">{category_link['anchor']}</a>`
            - CTA转化: `<a href="{cta_link['url']}">{cta_link['anchor']}</a>`
            - 链接文字要自然融入上下文，不可生硬堆砌。
-        5. **标题**: 必须严格控制在 16 个字符以内 (按双字节汉字计算，可包含数字、字母)。
+        5. **标题**: 长度控制在 8-30 个字符之间。必须包含“地域名+核心关键词+长尾修饰词”（例如：“东莞月饼礼盒定制厂家直销”），最大化 SEO 搜索流量。
         6. **Meta Description**: 必须 120-160 个字符，包含核心关键词和行动号召。
         7. **URL Slug**: 生成一个 SEO 友好的英文 URL 片段 (如: "mooncake-gift-box-guide")。要求: 全小写，用连字符连接，不超过 50 字符。
         8. **格式**: 返回纯 JSON。
