@@ -24,7 +24,7 @@ def run():
     # Use pagination loop if needed, but for now we fetch up to MAX_GENERATE_PER_CATEGORY * 3 to be safe
     # We fetch by status 'Ready'
     
-    pending_topics = client.fetch_records_by_status(config.STATUS_READY, limit=100)
+    pending_topics = client.fetch_records_by_status(config.STATUS_READY, limit=500)
     
     if not pending_topics:
         print("❌ 飞书中没有找到 Ready 状态的选题，请先运行 Step 1")
