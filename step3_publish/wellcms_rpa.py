@@ -173,11 +173,10 @@ class WellCMSPublisher:
                     print("      🔐 [Step 2] 填写后台密码...")
                     self.page.fill('input#password', self.password)
                     
-                    print("      🖱️ [Step 2] 点击后台登录按钮 (#submit)...")
-                    # 为了防止和顶部搜索搞混（虽然用户说ID是submit），我们加限定
-                    # 比如 button#submit 或 input#submit
-                    # 用户提供: <button id="submit" ...>
-                    self.page.click('button#submit')
+                    print("      🖱️ [Step 2] 点击后台登录按钮 (button.btn-danger)...")
+                    # 后台登录按钮是 btn-danger 类，不是 btn-primary
+                    # <button class="btn btn-block btn-danger shadow" id="submit">
+                    self.page.click('button.btn-danger#submit')
                     
                     print("      🔄 [Step 2] 等待跳转...")
                     self.page.wait_for_load_state("networkidle", timeout=20000)
