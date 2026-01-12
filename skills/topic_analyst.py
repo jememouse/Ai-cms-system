@@ -17,7 +17,7 @@ class TopicAnalysisSkill(BaseSkill):
     def __init__(self):
         super().__init__(
             name="topic_analysis",
-            description="分析热点列表，挑选最有价值的 33 个，并生成 6 个 SEO 标题"
+            description="分析热点列表，挑选最有价值的 33 个，并生成 5 个 SEO 标题"
         )
         self.api_key = config.LLM_API_KEY
         self.api_url = config.LLM_API_URL
@@ -78,7 +78,7 @@ class TopicAnalysisSkill(BaseSkill):
         我们是一家 **"包装在线定制电商平台（强大的供应链及品质管理+交付系统）"** （盒艺家）。
         你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 强大的供应链及品质管理+交付系统）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
         
-        请从以下全网热点中，**务必挑选出 1 个** (为了演示速度改为1个) 最适合写文章的话题。
+        请从以下全网热点中，**务必挑选出 33 个** 最适合写文章的话题。
         
         筛选优先级（兼顾 B2B 与 B2C）：
         1. **高意图转化**：包含 [搜索需求]、[1688采购]、多少钱、怎么选。
