@@ -79,55 +79,75 @@ class WellCMSPublisher:
     
     def _login(self) -> bool:
         """登录 WellCMS"""
+        print("      🔐 [RPA] 正在执行登录流程...")
         try:
+            # 1. 访问登录页
             self.page.goto(self.login_url, wait_until="networkidle", timeout=60000)
-            time.sleep(2)
             
-            # 检查是否需要登录
-            email_input = self.page.query_selector('#email')
-            if email_input:
+            # 2. 判断是否已在登录页 (或者需要登录)
+            # 有些 CMS 访问登录页如果已登录会自动跳后台，有些不会。
+            # 我们显式等待一下输入框，以防网络延迟
+            try:
+                self.page.wait_for_selector('#email', state="visible", timeout=5000)
+                print("      👀 检测到登录表单")
+                
+                # 填写账号密码
                 self.page.fill('#email', self.username)
                 self.page.fill('#password', self.password)
+                print("      📝 已填写账号密码")
                 
-                # 点击登录按钮
-                submit_buttons = self.page.query_selector_all('#submit')
-                if submit_buttons:
-                    submit_buttons[-1].click()
-                
-                time.sleep(5)
-            
-            # 访问后台
+                # 提交
+                # 尝试更精准的定位提交按钮
+                submit_btn = self.page.query_selector('button[type="submit"]') or \
+                             self.page.query_selector('input[type="submit"]') or \
+                             self.page.query_selector('#submit')
+                             
+                if submit_btn:
+                    print("      🖱️ 点击登录按钮...")
+                    # 点击并等待导航 (关键修正)
+                    with self.page.expect_navigation(timeout=15000):
+                         submit_btn.click()
+                    print("      🔄 页面已跳转")
+                else:
+                     print("      ❌ 未找到提交按钮 (#submit / type=submit)")
+            except Exception as e:
+                # 超时意味着可能不需要登录，或者已经登录了
+                print(f"      ℹ️ 未检测到登录表单 (可能已登录): {e}")
+
+            # 3. 强制跳转后台 (双保险)
+            print(f"      🔗 跳转后台: {self.admin_url}")
             self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
-            time.sleep(3)
             
-            # 检查是否需要输入后台密码
-            pwd_field = self.page.query_selector('input[type=password]')
-            if pwd_field:
-                pwd_field.fill(self.password)
-                self.page.keyboard.press('Enter')
-                time.sleep(5)
+            # 4. 检查是否遇到后台二次密码
+            try:
+                if self.page.wait_for_selector('input[type=password]', state="visible", timeout=3000):
+                    print("      🔐 检测到后台二次密码，正在填写...")
+                    self.page.fill('input[type=password]', self.password)
+                    self.page.keyboard.press('Enter')
+                    time.sleep(3)
+            except:
+                pass # 无二次密码
             
-            # 验证登录结果
-            time.sleep(3)
+            # 5. 最终验证
             current_url = self.page.url
             if "login" in current_url:
-                print(f"   ❌ 登录验证失败: 仍在登录页 ({current_url})")
+                print(f"      ❌ 登录失败: 仍在登录页 ({current_url})")
+                # 尝试打印页面上的错误提示
+                content = self.page.content()
+                if "验证码" in content or "captcha" in content.lower():
+                    print("      ⚠️ 疑似触发验证码拦截！")
+                if "密码错误" in content:
+                    print("      ⚠️ 提示密码错误！")
                 return False
                 
-            # 再次检查是否有密码框 (说明密码错误或未跳转)
-            if self.page.query_selector('input[type=password]'):
-                 print("   ❌ 登录验证失败: 后台密码框仍存在 (可能密码错误)")
-                 return False
-                 
-            # 检查是否有后台特征 (如: 退出按钮, 菜单)
             if "admin" not in current_url:
-                 print(f"   ⚠️ 警告: URL 不包含 admin ({current_url})")
-
-            print("   ✅ WellCMS 登录成功 (已验证)")
+                print(f"      ⚠️ 警告: 未进入标准后台 URL ({current_url})")
+                
+            print("      ✅ 登录流程完成")
             return True
             
         except Exception as e:
-            print(f"   ❌ 登录失败: {e}")
+            print(f"      ❌ 登录过程异常: {e}")
             return False
     
     def _publish_article(self, article: Dict) -> Tuple[bool, str]:
