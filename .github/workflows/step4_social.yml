@@ -1,13 +1,13 @@
-name: Step2 - AI 文章生成
+name: Step4 - 小红书内容裂变
 
 on:
   schedule:
-    # 北京时间 02:00 -> UTC 18:00
-    - cron: '0 18 * * *'
+    # 北京时间 06:30 (确保 7:00 前完成) -> UTC 22:30
+    - cron: '30 22 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
-  step2-article:
+  step4-social:
     runs-on: ubuntu-latest
     
     steps:
@@ -22,14 +22,21 @@ jobs:
     - name: Install dependencies
       run: uv sync
 
-    - name: Run Step2 - AI 文章生成 (按时间顺序处理所有文章)
+    - name: Run Step4 - 小红书内容裂变
       env:
-        # 使用国内 DeepSeek 直连 API
+        # LLM Keys
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        
+        # Feishu Config
         FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
         FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+        FEISHU_XHS_TABLE_ID: ${{ secrets.FEISHU_XHS_TABLE_ID }}
+        
+        # Runtime Config
+        MAX_DAILY_XHS: 20
         TZ: 'Asia/Shanghai'
       run: |
-        uv run python -m step2_article.agent_runner
+        uv run python -m step4_social.runner

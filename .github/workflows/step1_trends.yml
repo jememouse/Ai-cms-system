@@ -2,8 +2,8 @@ name: Step1 - 热词搜索与标题生成
 
 on:
   schedule:
-    # 北京时间 08:00, 21:00 -> UTC 00:00, 13:00
-    - cron: '0 0,13 * * *'
+    # 北京时间 22:00 -> UTC 14:00
+    - cron: '0 14 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
