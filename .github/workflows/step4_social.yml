@@ -36,7 +36,7 @@ jobs:
         FEISHU_XHS_TABLE_ID: ${{ secrets.FEISHU_XHS_TABLE_ID }}
         
         # Runtime Config
-        MAX_DAILY_XHS: 20
+        MAX_DAILY_XHS: 10
         TZ: 'Asia/Shanghai'
       run: |
         uv run python -m step4_social.runner
