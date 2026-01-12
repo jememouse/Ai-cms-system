@@ -115,24 +115,36 @@ class WellCMSPublisher:
                 print(f"      ℹ️ 未检测到登录表单 (可能已登录): {e}")
 
             # 3. 强制跳转后台 (双保险)
+            # 3. 强制跳转后台 (这里会触发第二次登录验证)
             print(f"      🔗 跳转后台: {self.admin_url}")
             self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
             
-            # 🚨 关键检查：如果此时跳回了登录页，说明登录完全失败，不用再试二次密码了
-            if "login" in self.page.url:
-                 print(f"      ❌ 跳转后台失败，被重定向回登录页 ({self.page.url})")
-                 return False
-
-            # 4. 检查是否遇到后台二次密码
-            # 只有当不在登录页时，才检测这个，防止误判
+            # 4. 执行二次登录 (仅需密码)
+            # 用户提示: WellCMS 第一次输账号密码，第二次只输密码
             try:
+                # 检测是否有密码框
                 if self.page.wait_for_selector('input[type=password]', state="visible", timeout=3000):
-                    print("      🔐 检测到后台二次密码，正在填写...")
+                    print("      🔐 [Step 2] 检测到后台二次验证，正在填写密码...")
+                    # 确保清楚可能存在的旧值（如果有）
                     self.page.fill('input[type=password]', self.password)
-                    self.page.keyboard.press('Enter')
-                    time.sleep(3)
-            except:
-                pass # 无二次密码
+                    
+                    # 尝试点击提交，比回车更稳
+                    submit_btn = self.page.query_selector('button[type="submit"]') or \
+                                 self.page.query_selector('input[type="submit"]') or \
+                                 self.page.query_selector('#submit')
+                    
+                    if submit_btn:
+                        print("      �️ [Step 2] 点击提交按钮...")
+                        with self.page.expect_navigation(timeout=15000):
+                             submit_btn.click()
+                    else:
+                        print("      ⌨️ [Step 2] 未找到按钮，尝试回车提交...")
+                        self.page.keyboard.press('Enter')
+                        time.sleep(3)
+                        
+                    print("      🔄 [Step 2] 页面已跳转")
+            except Exception as e:
+                print(f"      ℹ️二次验证跳过或异常: {e}")
             
             # 5. 最终验证
             current_url = self.page.url
