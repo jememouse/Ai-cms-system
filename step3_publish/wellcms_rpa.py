@@ -227,11 +227,24 @@ class WellCMSPublisher:
                 raise e
             
             # 选择分类
-            category_id = article.get('category_id', '1')
+            # 根据用户配置: 专业知识=1, 行业资讯=2, 产品介绍=3
+            # 默认发布页现在是: fid=0 (用户更新)
+            category_mapping = {
+                "专业知识": "1",
+                "行业资讯": "2",
+                "产品介绍": "3"
+            }
+            category_id = category_mapping.get(article.get('category_id'), "0") # 默认为 0
+            
+            # 如果 category_id 在 map 里没找到，尝试用 article 从上游传来的原始值
+            if category_id == "0" and article.get('category_id') in ["1", "2", "3"]:
+                category_id = article.get('category_id')
+
             try:
                 self.page.select_option('select[name="fid"]', category_id)
+                print(f"      📂 已选择分类 ID: {category_id}")
             except Exception:
-                pass  # 分类选择失败不阻塞
+                print(f"      ⚠️ 选择分类失败 (ID: {category_id})")
             
             time.sleep(1)
             

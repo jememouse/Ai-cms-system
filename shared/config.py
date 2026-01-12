@@ -42,7 +42,7 @@ WELLCMS_USERNAME = os.getenv("WELLCMS_USERNAME", "product_manager")
 WELLCMS_PASSWORD = os.getenv("WELLCMS_PASSWORD", "5227756c4aae247b")
 WELLCMS_LOGIN_URL = os.getenv("WELLCMS_LOGIN_URL", "https://heyijiapack.com/news/user-login.html")
 WELLCMS_ADMIN_URL = os.getenv("WELLCMS_ADMIN_URL", "https://heyijiapack.com/news/admin/index.php")
-WELLCMS_POST_URL = os.getenv("WELLCMS_POST_URL", "https://heyijiapack.com/news/admin/index.php?0=content&1=create&fid=2")
+WELLCMS_POST_URL = os.getenv("WELLCMS_POST_URL", "https://heyijiapack.com/news/admin/index.php?0=content&1=create&fid=0")
 
 # 配置文件
 CONFIG_FILE = os.path.join(PROJECT_ROOT, "box_artist_config.json")
