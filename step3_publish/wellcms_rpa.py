@@ -77,6 +77,37 @@ class WellCMSPublisher:
         if self.playwright:
             self.playwright.stop()
     
+    def _safe_goto(self, url: str, wait_until: str = "domcontentloaded", timeout: int = 30000, retries: int = 2) -> bool:
+        """
+        安全的页面导航，统一处理 ERR_ABORTED 等网络问题
+        
+        Args:
+            url: 目标 URL
+            wait_until: 等待策略 (domcontentloaded 比 networkidle 更稳定)
+            timeout: 超时时间 (毫秒)
+            retries: 重试次数
+        
+        Returns:
+            是否成功导航
+        """
+        for attempt in range(retries + 1):
+            try:
+                self.page.goto(url, wait_until=wait_until, timeout=timeout)
+                time.sleep(1)  # 短暂等待确保页面稳定
+                return True
+            except Exception as e:
+                if attempt < retries:
+                    print(f"      ⚠️ 导航失败 ({attempt + 1}/{retries + 1}): {e}")
+                    time.sleep(2)  # 等待后重试
+                else:
+                    print(f"      ❌ 导航最终失败: {e}")
+                    # 检查是否已在目标页面
+                    if url.split("?")[0] in self.page.url:
+                        print(f"      ℹ️ 已在目标页面，继续执行")
+                        return True
+                    return False
+        return False
+    
     def _login(self) -> bool:
         """
         登录 WellCMS (基于用户提供的精确 Selector)
@@ -89,7 +120,8 @@ class WellCMSPublisher:
             # Step 1: 前台登录
             # ==================================================================
             print(f"      📍 [Step 1] 访问前台: {self.login_url}")
-            self.page.goto(self.login_url, wait_until="networkidle", timeout=60000)
+            if not self._safe_goto(self.login_url):
+                return False
             
             try:
                 # 检查 #email 是否存在
@@ -114,18 +146,10 @@ class WellCMSPublisher:
             # ==================================================================
             # Step 2: 后台二次验证
             # ==================================================================
-            # 修复: 等待登录跳转完成，避免 ERR_ABORTED
-            import time
-            time.sleep(2)
+            time.sleep(2)  # 等待登录跳转完成
             
             print(f"      📍 [Step 2] 强制访问后台: {self.admin_url}")
-            try:
-                # 使用 domcontentloaded 替代 networkidle，更快且更稳定
-                self.page.goto(self.admin_url, wait_until="domcontentloaded", timeout=30000)
-            except Exception as goto_err:
-                print(f"      ⚠️ [Step 2] goto 异常: {goto_err}")
-                # 可能已经在目标页面了，继续检查
-                time.sleep(1)
+            self._safe_goto(self.admin_url)
             
             # 检查是否被踢回
             if "user-login" in self.page.url:
@@ -172,13 +196,9 @@ class WellCMSPublisher:
     def _publish_article(self, article: Dict) -> Tuple[bool, str]:
         """发布文章"""
         try:
-            # 导航到发布页面 (修复 ERR_ABORTED)
-            try:
-                self.page.goto(self.post_url, timeout=30000, wait_until="domcontentloaded")
-            except Exception as goto_err:
-                print(f"      ⚠️ 发布页面 goto 异常: {goto_err}")
-                # 继续检查是否已在目标页
-            time.sleep(2)
+            # 导航到发布页面
+            if not self._safe_goto(self.post_url):
+                return False, ""
             
             # 填写标题
             # 填写标题
@@ -432,7 +452,7 @@ class WellCMSPublisher:
 
                 try:
                     # 1. 强制刷新/跳转列表页
-                    self.page.goto(list_url, wait_until="networkidle", timeout=30000)
+                    self._safe_goto(list_url)
                     
                     # 2. 显式等待表格加载 (尝试等待3秒)
                     try:
