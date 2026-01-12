@@ -94,7 +94,38 @@ class TopicAnalysisSkill(BaseSkill):
         ]
         """
         res = self._call_deepseek(prompt)
-        return res if isinstance(res, list) else []
+        analyzed_trends = res if isinstance(res, list) else []
+        
+        # === Fallback: 确保数量达标 (24个) ===
+        target_count = 24
+        if len(analyzed_trends) < target_count:
+            print(f"⚠️ [Topics] LLM仅返回 {len(analyzed_trends)} 个 (目标{target_count})，启动自动补全...")
+            import random
+            
+            # 1. 提取已有的 topics 以避免重复
+            existing_topics = {t.get("topic", "") for t in analyzed_trends}
+            
+            # 2. 从原始列表中寻找候选
+            candidates = []
+            for raw_t in trends:
+                # 简单清理：去除 "[平台]" 前缀
+                clean_t = re.sub(r'\[.*?\]\s*', '', raw_t)
+                if clean_t and clean_t not in existing_topics:
+                    candidates.append(clean_t)
+            
+            # 3. 随机抽取补全
+            needed = target_count - len(analyzed_trends)
+            if candidates:
+                fillers = random.sample(candidates, min(needed, len(candidates)))
+                for f in fillers:
+                    analyzed_trends.append({
+                        "topic": f,
+                        "angle": "全网热点流量承接",
+                        "priority": "A"
+                    })
+            print(f"✅ [Topics] 已补全至 {len(analyzed_trends)} 个")
+            
+        return analyzed_trends[:target_count]
 
     def _generate_titles(self, trend, brand_config):
         brand_name = brand_config.get('brand', {}).get('name', '盒艺家')
