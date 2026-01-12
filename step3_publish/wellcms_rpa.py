@@ -79,108 +79,79 @@ class WellCMSPublisher:
     
     def _login(self) -> bool:
         """
-        登录 WellCMS (严格分步版)
-        Step 1: 前台登录 (账号+密码)
-        Step 2: 后台验证 (仅密码)
+        登录 WellCMS (基于用户提供的精确 Selector)
+        Step 1: https://heyijiapack.com/news/user-login.html
+        Step 2: https://heyijiapack.com/news/admin/index.php
         """
-        print("      🔐 [RPA] 启动严格登录流程...")
+        print("      🔐 [RPA] 启动精确匹配登录流程...")
         try:
             # ==================================================================
             # Step 1: 前台登录
-            # URL: https://heyijiapack.com/news/user-login.html
             # ==================================================================
-            print(f"      📍 [Step 1] 访问前台登录页: {self.login_url}")
+            print(f"      📍 [Step 1] 访问前台: {self.login_url}")
             self.page.goto(self.login_url, wait_until="networkidle", timeout=60000)
             
             try:
-                # 只有出现邮箱输入框才说明需要登录
+                # 检查 #email 是否存在
                 if self.page.wait_for_selector('#email', state="visible", timeout=5000):
                     print("      👀 [Step 1] 填写账号密码...")
+                    # 用户提供的 Selector: #email, #password
                     self.page.fill('#email', self.username)
                     self.page.fill('#password', self.password)
                     
                     print("      🖱️ [Step 1] 点击登录按钮 (#submit)...")
-                    # 明确点击 ID 为 submit 的按钮 (最准)
+                    # 用户提供的 Selector: #submit
                     self.page.click('#submit')
                     
-                    # 等待跳转
                     print("      ⏳ [Step 1] 等待跳转...")
-                    self.page.wait_for_load_state("networkidle", timeout=15000)
+                    self.page.wait_for_load_state("networkidle", timeout=20000)
                 else:
                     print("      ℹ️ [Step 1] 未检测到输入框，可能已登录")
             except Exception as e:
-                print(f"      ⚠️ [Step 1] 异常 (但不影响继续尝试): {e}")
+                print(f"      ⚠️ [Step 1] 异常: {e}")
 
             # ==================================================================
             # Step 2: 后台二次验证
-            # URL: https://heyijiapack.com/news/admin/index.php
-            # Action: 仅填写密码 + 点击"提交"
             # ==================================================================
-            print(f"      � [Step 2] 强制访问后台: {self.admin_url}")
+            print(f"      📍 [Step 2] 强制访问后台: {self.admin_url}")
             self.page.goto(self.admin_url, wait_until="networkidle", timeout=60000)
             
-            # 检测是否被踢回登录页
+            # 检查是否被踢回
             if "user-login" in self.page.url:
-                print(f"      ❌ [Step 2] 失败: 被重定向回前台登录页 ({self.page.url})")
-                return False
+                 print(f"      ❌ [Step 2] 失败: 被重定向回前台登录页 ({self.page.url})")
+                 return False
 
             try:
-                # 检测密码框 (二次验证特征)
-                if self.page.wait_for_selector('input[type=password]', state="visible", timeout=3000):
-                    print("      🔐 [Step 2] 需要二次验证，正在填写密码...")
-                    self.page.fill('input[type=password]', self.password)
+                # 页面包含: <input id="password"> 和 <button id="submit">
+                # 注意: 这里 input id 也是 password，所以要确保是在 admin 页面下
+                if self.page.wait_for_selector('input#password', state="visible", timeout=3000):
+                    print("      🔐 [Step 2] 填写后台密码...")
+                    self.page.fill('input#password', self.password)
                     
-                    # 🚨 核心修复: 严禁点击"搜索"按钮
-                    # 策略: 根据中文文本 "提交" 或 "登录" 来定位按钮
-                    print("      🖱️ [Step 2] 正在寻找 '提交' 按钮...")
+                    print("      🖱️ [Step 2] 点击后台登录按钮 (#submit)...")
+                    # 为了防止和顶部搜索搞混（虽然用户说ID是submit），我们加限定
+                    # 比如 button#submit 或 input#submit
+                    # 用户提供: <button id="submit" ...>
+                    self.page.click('button#submit')
                     
-                    submit_clicked = False
-                    # 1. 尝试找 value="提交" 或 text="提交" 的按钮
-                    for btn_text in ["提交", "登录", "确定", "Submit", "Login"]:
-                        # 尝试 input[type=submit][value=xxx]
-                        btn = self.page.query_selector(f'input[type="submit"][value="{btn_text}"]')
-                        if not btn:
-                            # 尝试 button:has-text(xxx)
-                            # 注意: button 可能会匹配到搜索按钮，所以要排除 icon
-                            locator = self.page.get_by_role("button", name=btn_text, exact=True)
-                            if locator.count() > 0:
-                                btn = locator.first
-                        
-                        if btn:
-                            print(f"      ✅ [Step 2] 找到按钮: {btn_text}")
-                            with self.page.expect_navigation(timeout=20000):
-                                if isinstance(btn,  type(self.page.query_selector('body'))): # ElementHandle
-                                    btn.click()
-                                else: # Locator
-                                    btn.click()
-                            submit_clicked = True
-                            print("      🔄 [Step 2] 页面已跳转")
-                            break
-                    
-                    if not submit_clicked:
-                        print("      ⚠️ [Step 2] 未找到明显文字按钮，尝试回车...")
-                        self.page.keyboard.press('Enter')
-                        time.sleep(3)
-
+                    print("      🔄 [Step 2] 等待跳转...")
+                    self.page.wait_for_load_state("networkidle", timeout=20000)
             except Exception as e:
-                print(f"      ⚠️ [Step 2] 二次验证流程异常: {e}")
-                # 截图留证
-                try: self.page.screenshot(path="step2_error.png") 
-                except: pass
+                 print(f"      ℹ️ [Step 2] 无需二次验证或异常: {e}")
 
             # ==================================================================
-            # 最终状态检查
+            # 结果检查
             # ==================================================================
             current_url = self.page.url
             if "operate-search" in current_url:
-                 print(f"      ❌ [Result] 还是点错了! 进入了搜索页 ({current_url})")
+                 print(f"      ❌ [Result] 误触搜索页 ({current_url})")
                  return False
                  
             if "admin" in current_url and "login" not in current_url:
-                print("      ✅ [Result] 登录成功，已在后台")
+                print("      ✅ [Result] 登录成功")
                 return True
             else:
-                print(f"      ❌ [Result] 登录失败，当前URL: {current_url}")
+                print(f"      ❌ [Result] 登录失败 ({current_url})")
                 return False
                 
         except Exception as e:
