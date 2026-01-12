@@ -35,6 +35,9 @@ jobs:
         WELLCMS_USERNAME: ${{ secrets.WELLCMS_USERNAME }}
         WELLCMS_PASSWORD: ${{ secrets.WELLCMS_PASSWORD }}
         PUBLISH_CONFIG_JSON: ${{ secrets.PUBLISH_CONFIG_JSON }}
+        # Google Sheets Config
+        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         TZ: 'Asia/Shanghai'
       run: |
         uv run python -m step3_publish.agent_runner

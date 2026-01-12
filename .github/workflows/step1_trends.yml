@@ -28,6 +28,9 @@ jobs:
         FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
         FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
         FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID }}
+        # Google Sheets Config
+        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         TZ: 'Asia/Shanghai'
       run: |

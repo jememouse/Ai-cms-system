@@ -35,8 +35,12 @@ jobs:
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         FEISHU_XHS_TABLE_ID: ${{ secrets.FEISHU_XHS_TABLE_ID }}
         
+        
         # Runtime Config
         MAX_DAILY_XHS: 10
         TZ: 'Asia/Shanghai'
+        # Google Sheets Config
+        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
       run: |
-        uv run python -m step4_social.runner
+        uv run python -m step4_social.agent_runner
