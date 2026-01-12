@@ -38,8 +38,37 @@ class WellCMSPublisher:
         self.playwright = sync_playwright().start()
         # 支持通过环境变量控制 Headless (方便本地调试)
         is_headless = os.getenv("HEADLESS", "true").lower() == "true"
-        self.browser = self.playwright.chromium.launch(headless=is_headless)
-        self.page = self.browser.new_page()
+        
+        # 增加防检测参数
+        args = [
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-infobars",
+            "--window-size=1920,1080",
+            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ]
+        
+        self.browser = self.playwright.chromium.launch(
+            headless=is_headless,
+            args=args
+        )
+        
+        # 使用特定 UserAgent 和 Viewport 创建 Context
+        context = self.browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
+            locale="zh-CN",
+            timezone_id="Asia/Shanghai"
+        )
+        # 注入 stealth js
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+        """)
+        
+        self.page = context.new_page()
     
     def _close_browser(self):
         """关闭浏览器"""
