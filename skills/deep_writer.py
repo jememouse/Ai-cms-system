@@ -266,10 +266,17 @@ class DeepWriteSkill(BaseSkill):
           "title": "标题...",
           "html_content": "HTML内容...",
           "category_id": "{category_id}",
-          "summary": "...",
+          "summary": "SEO Description...",
           "keywords": "...",
           "description": "...",
           "tags": "...",
+          "one_line_summary": "简练的一句话总结 (One sentence summary)",
+          "key_points": ["核心观点1", "核心观点2", "核心观点3"],
+          "schema_faq": [
+            {{"question": "Q1...", "answer": "A1..."}},
+            {{"question": "Q2...", "answer": "A2..."}},
+            {{"question": "Q3...", "answer": "A3..."}}
+          ],
           "article_schema": {{ ... }},
           "og_tags": {{ ... }},
           "url_slug": "...",
