@@ -99,9 +99,10 @@ class WellCMSPublisher:
                     self.page.fill('#email', self.username)
                     self.page.fill('#password', self.password)
                     
-                    print("      🖱️ [Step 1] 点击登录按钮 (#submit)...")
-                    # 用户提供的 Selector: #submit
-                    self.page.click('#submit')
+                    print("      🖱️ [Step 1] 点击登录按钮 (button.btn-primary)...")
+                    # 修复: 页面有两个 #submit (搜索按钮和登录按钮)
+                    # 使用更精确的 selector 点击登录按钮
+                    self.page.click('button.btn-primary#submit')
                     
                     print("      ⏳ [Step 1] 等待跳转...")
                     self.page.wait_for_load_state("networkidle", timeout=20000)
