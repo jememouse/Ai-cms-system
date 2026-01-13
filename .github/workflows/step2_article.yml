@@ -33,7 +33,6 @@ jobs:
         # Google Sheets Config
         GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-        GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
         TZ: 'Asia/Shanghai'
       run: |
