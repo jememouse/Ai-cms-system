@@ -27,10 +27,8 @@ class GoogleSheetClient:
         self.client = None
         self.spreadsheet = None
         
-        if os.path.exists(self.creds_file):
-            self._connect()
-        else:
-            print(f"⚠️ Google Credentials 文件未找到: {self.creds_file}")
+        # 总是尝试连接（_connect 内部会优先检查环境变量，再检查文件）
+        self._connect()
 
     def _connect(self):
         """连接到 Google Spreadsheet"""
