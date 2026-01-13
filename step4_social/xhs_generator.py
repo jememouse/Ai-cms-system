@@ -154,7 +154,7 @@ class XHSGenerator:
         # 构造 URL
         # Pollinations 格式: https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}
         encoded_prompt = requests.utils.quote(f"{base_prompt} {keywords}")
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1360&nologo=true"
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1360&nologo=true&key={config.POLLINATIONS_API_KEY}"
         
         return url
 
