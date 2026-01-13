@@ -52,6 +52,11 @@ def run():
             # 4. 系统负责持久化 (System Action)
             # Agent 只负责生产内容，Runner/Workflow 负责 IO 写入，这也是一种解耦
             
+            # [Data Integrity] 强校验
+            if not post_data.get('title') or not post_data.get('content'):
+                print(f"   ⚠️ [Error] 生成的小红书内容无效，跳过保存")
+                continue
+            
             post_time_str = base_time.strftime("%Y-%m-%d %H:%M:%S")
             
             new_record = {
