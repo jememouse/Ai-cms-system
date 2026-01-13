@@ -78,28 +78,53 @@ def run():
         
         # [Idempotency Check] 防止重复发布
         # 如果状态是 Pending 但已经有 URL，说明上次发布成功但状态更新失败
+        # [Idempotency Check] 防止重复发布，但需处理重生成的情况
+        # 如果状态是 Pending 但已经有 URL:
+        # 1. 如果 GenTime > PubTime -> 说明是重生成的新文章，旧 URL 是过期的，应该重新发布。
+        # 2. 如果 GenTime < PubTime -> 说明是状态回滚了，URL 是有效的，应该恢复为 Published。
         existing_url = record.get('URL', '').strip()
+        
         if existing_url and existing_url.startswith('http'):
-            print(f"   ⚠️ 检测到该文章已有 URL ({existing_url})，判断为已发布。")
-            print(f"   🔄 正在修复状态为 Published...")
+            gen_time_str = record.get('生成时间', '2000-01-01 00:00:00')
+            pub_time_str = record.get('发布时间', '2099-12-31 23:59:59') # 默认为未来，防止误判
             
-            # 修复状态
-            client.update_record(record['record_id'], {
-                "Status": config.STATUS_PUBLISHED
-            })
-            
-            # 同时也确保写入 asset，防止漏掉 SEO 内链
-            article_data_fix = {
-                "title": record.get('Title'),
-                "url": existing_url,
-                "keywords": record.get('关键词'),
-                "category_id": config.CATEGORY_MAP.get(str(record.get('大项分类', '')).strip(), "1"),
-                "summary": record.get('摘要')
-            }
-            _record_to_assets(article_data_fix, existing_url)
-            
-            print(f"   ✅ 状态修复完成，跳过本次重复发布。")
-            continue
+            try:
+                gen_time = datetime.strptime(gen_time_str, "%Y-%m-%d %H:%M:%S")
+                # 有些记录可能没有发布时间，如果为空，则认为是 1970
+                if not record.get('发布时间'):
+                    pub_time = datetime.min
+                else:
+                    pub_time = datetime.strptime(pub_time_str, "%Y-%m-%d %H:%M:%S")
+            except:
+                # 解析失败，保守起见认为是 Stale
+                gen_time = datetime.max
+                pub_time = datetime.min
+
+            if gen_time > pub_time:
+                print(f"   🔄 [Stale Check] 检测到内容已重生成 (Gen: {gen_time_str} > Pub: {pub_time_str})")
+                print(f"   🗑️ 忽略旧 URL，执行重新发布...")
+                # 不 continue，继续往下执行发布逻辑
+            else:
+                print(f"   ⚠️ 检测到该文章已有 URL ({existing_url}) 且未重生成。")
+                print(f"   🔄 正在修复状态为 Published...")
+                
+                # 修复状态
+                client.update_record(record['record_id'], {
+                    "Status": config.STATUS_PUBLISHED
+                })
+                
+                # 同时也确保写入 asset
+                article_data_fix = {
+                    "title": record.get('Title'),
+                    "url": existing_url,
+                    "keywords": record.get('关键词'),
+                    "category_id": config.CATEGORY_MAP.get(str(record.get('大项分类', '')).strip(), "1"),
+                    "summary": record.get('摘要')
+                }
+                _record_to_assets(article_data_fix, existing_url)
+                
+                print(f"   ✅ 状态修复完成，跳过本次重复发布。")
+                continue
             
         # [Data Integrity] 发布前强校验
         title_chk = record.get('Title', '').strip()

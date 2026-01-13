@@ -37,10 +37,75 @@ GOOGLE_CREDENTIALS_FILE = os.path.join(PROJECT_ROOT, "service_account.json")
 GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID", "1EZePBUdlJa_nn_OVQJie4sFqgG4UxDJm56ZPah92eKY")
 GOOGLE_WORKSHEET_NAME = "cms" # Default
 
-# 小红书配置
-# 注意：映射为 Google Worksheet Name "xhs"
+# 社交媒体平台配置 (矩阵系统)
+SOCIAL_PLATFORMS = {
+    "douyin": {
+        "name": "抖音",
+        "type": "article", # User requested Article
+        "sheet_name": "douyin",
+        "title_limit": 20,
+        "content_limit": 900,
+        "keywords_limit": 4,
+        "daily_target": 12
+    },
+    "wechat_video": {
+        "name": "微信视频",
+        "type": "article", # User requested Article
+        "sheet_name": "wechat_video",
+        "title_limit": 20,
+        "content_limit": 900,
+        "keywords_limit": 4,
+        "daily_target": 9
+    },
+    "xhs": {
+        "name": "小红书",
+        "type": "note",
+        "sheet_name": "xhs",
+        "title_limit": 20,
+        "content_limit": 900,
+        "keywords_limit": 4,
+        "daily_target": 12
+    },
+    "kuaishou": {
+        "name": "快手",
+        "type": "article", # User requested Article
+        "sheet_name": "kuaishou",
+        "title_limit": 20,
+        "content_limit": 400, # 短快
+        "keywords_limit": 4,
+        "daily_target": 12
+    },
+    "baijiahao": {
+        "name": "百家号",
+        "type": "article",
+        "sheet_name": "baijiahao",
+        "title_limit": 20,
+        "content_limit": 900,
+        "keywords_limit": 1, # 只要一个精准词
+        "daily_target": 12
+    },
+    "weibo": {
+        "name": "微博",
+        "type": "microblog",
+        "sheet_name": "weibo",
+        "title_limit": 20, # 微博其实没标题，这里指第一句
+        "content_limit": 900,
+        "keywords_limit": 4,
+        "daily_target": 12
+    },
+    "bilibili": {
+        "name": "BILIBILI",
+        "type": "article", # User requested Article
+        "sheet_name": "bilibili",
+        "title_limit": 20,
+        "content_limit": 900,
+        "keywords_limit": 10, # B站tag多
+        "daily_target": 3
+    }
+}
+# 旧配置兼容
 FEISHU_XHS_TABLE_ID = "xhs"
-MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "50")) # 每日/单次运行最大生成数
+MAX_DAILY_XHS = 12 # Default fallback
 
 # WellCMS 配置
 WELLCMS_USERNAME = os.getenv("WELLCMS_USERNAME", "product_manager")

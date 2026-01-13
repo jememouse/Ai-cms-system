@@ -102,7 +102,10 @@ def run():
                 "摘要": article.get('summary'),
                 "描述": article.get('description'),
                 "Tags": article.get('tags'),
-                "生成时间": current_time, 
+                "生成时间": current_time,
+                # [Fix Zombie State] 重生成时必须清除旧的发布信息
+                "URL": "",
+                "发布时间": "", 
                 # "选题生成时间": item.get('created_at', ''), # Retain original value
                 "One_Line_Summary": article.get('one_line_summary', ''),
                 "Schema_FAQ": json.dumps(article.get('schema_faq', []), ensure_ascii=False),
