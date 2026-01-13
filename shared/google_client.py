@@ -35,7 +35,27 @@ class GoogleSheetClient:
     def _connect(self):
         """连接到 Google Spreadsheet"""
         try:
-            creds = ServiceAccountCredentials.from_json_keyfile_name(self.creds_file, self.scope)
+            creds = None
+            
+            # 优先尝试从环境变量读取 JSON 字符串 (For GitHub Actions)
+            json_str = os.getenv("GOOGLE_CREDENTIALS_JSON")
+            if json_str:
+                try:
+                    keyfile_dict = json.loads(json_str)
+                    creds = ServiceAccountCredentials.from_json_keyfile_dict(keyfile_dict, self.scope)
+                    # print("✅ 从环境变量加载 Google Credentials") # Optional debug
+                except json.JSONDecodeError:
+                    print("⚠️ 环境变量 GOOGLE_CREDENTIALS_JSON 解析失败，尝试从文件加载")
+
+            # 如果环境变量没搞定，再尝试从文件加载
+            if not creds and os.path.exists(self.creds_file):
+                 creds = ServiceAccountCredentials.from_json_keyfile_name(self.creds_file, self.scope)
+            
+            if not creds:
+                print("❌ 未找到有效的 Google Credentials (ENV or File)")
+                self.client = None
+                return
+
             self.client = gspread.authorize(creds)
             if self.sheet_id:
                 self.spreadsheet = self.client.open_by_key(self.sheet_id)
