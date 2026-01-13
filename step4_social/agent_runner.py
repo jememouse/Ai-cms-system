@@ -74,7 +74,7 @@ def run():
             else:
                 print("   ❌ [System] 保存失败")
         
-        time.sleep(2)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     run()

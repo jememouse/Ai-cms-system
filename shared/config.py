@@ -40,7 +40,7 @@ GOOGLE_WORKSHEET_NAME = "cms" # Default
 # 小红书配置
 # 注意：映射为 Google Worksheet Name "xhs"
 FEISHU_XHS_TABLE_ID = "xhs"
-MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "10")) # 每日/单次运行最大生成数
+MAX_DAILY_XHS = int(os.getenv("MAX_DAILY_XHS", "50")) # 每日/单次运行最大生成数
 
 # WellCMS 配置
 WELLCMS_USERNAME = os.getenv("WELLCMS_USERNAME", "product_manager")
@@ -71,3 +71,6 @@ MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "18"))     
 
 # 发布配置文件路径
 PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
+
+# Pollinations AI Configuration
+POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "pk_stu33lc2AgU55DRp")

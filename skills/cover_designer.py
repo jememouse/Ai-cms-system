@@ -1,9 +1,11 @@
 import requests
 import sys
 import os
+from typing import Dict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.skill import BaseSkill
+from shared import config
 
 class CoverDesignSkill(BaseSkill):
     """
@@ -31,6 +33,6 @@ class CoverDesignSkill(BaseSkill):
         final_prompt = f"{base_prompt} {keywords}"
         
         encoded_prompt = requests.utils.quote(final_prompt)
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1360&nologo=true"
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1360&nologo=true&key={config.POLLINATIONS_API_KEY}"
         
         return url
