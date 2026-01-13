@@ -37,32 +37,46 @@ class GoogleSheetClient:
         try:
             creds = None
             
-            # 优先尝试从环境变量读取 JSON 字符串 (For GitHub Actions)
+            # 1. 尝试从环境变量读取
             json_str = os.getenv("GOOGLE_CREDENTIALS_JSON")
             if json_str:
+                # print(f"🔍 检测到环境变量 GOOGLE_CREDENTIALS_JSON (长度: {len(json_str)})") # Debug
                 try:
                     keyfile_dict = json.loads(json_str)
                     creds = ServiceAccountCredentials.from_json_keyfile_dict(keyfile_dict, self.scope)
-                    # print("✅ 从环境变量加载 Google Credentials") # Optional debug
-                except json.JSONDecodeError:
-                    print("⚠️ 环境变量 GOOGLE_CREDENTIALS_JSON 解析失败，尝试从文件加载")
+                    # print("✅ 成功解析 Service Account JSON")
+                except json.JSONDecodeError as e:
+                    print(f"❌ 环境变量 JSON 解析失败: {e}")
+            else:
+                pass 
+                # print("ℹ️ 未检测到环境变量 GOOGLE_CREDENTIALS_JSON")
 
-            # 如果环境变量没搞定，再尝试从文件加载
-            if not creds and os.path.exists(self.creds_file):
-                 creds = ServiceAccountCredentials.from_json_keyfile_name(self.creds_file, self.scope)
-            
+            # 2. 如果环境变量没搞定，再尝试从文件加载
             if not creds:
-                print("❌ 未找到有效的 Google Credentials (ENV or File)")
+                if os.path.exists(self.creds_file):
+                    # print(f"🔍 尝试从文件加载: {self.creds_file}")
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(self.creds_file, self.scope)
+                else:
+                    # 只有当两个都失败时，才打印这个警告
+                    print(f"⚠️ Google Credentials 文件未找到: {self.creds_file}")
+
+            if not creds:
+                print("❌ [Fatal] 未找到有效的 Google Credentials (既无 ENV 也无 File)")
                 self.client = None
                 return
 
+            # print("🔐 正在进行 gspread 认证...")
             self.client = gspread.authorize(creds)
+            
             if self.sheet_id:
                 self.spreadsheet = self.client.open_by_key(self.sheet_id)
                 print(f"✅ Google Spreadsheet 连接成功: {self.spreadsheet.title}")
             
         except Exception as e:
-            print(f"❌ Google Sheet 连接失败: {e}")
+            print(f"❌ Google Sheet 连接异常: {e}")
+            # 打印更详细的错误堆栈，如果是认证错误
+            import traceback
+            traceback.print_exc()
             self.client = None
 
     def _get_sheet(self, table_id: str = None):
