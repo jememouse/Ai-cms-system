@@ -181,6 +181,7 @@ class GoogleSheetClient:
                 
             # 执行更新
             headers = sheet.row_values(1)
+            cells_to_update = []
             
             for key, value in fields.items():
                 if key in headers:
@@ -191,9 +192,13 @@ class GoogleSheetClient:
                     else:
                         val_str = str(value)
                         
-                    sheet.update_cell(row_num, col_index, val_str)
+                    # 创建 Cell 对象并加入列表
+                    cells_to_update.append(gspread.Cell(row_num, col_index, val_str))
                 else:
                     print(f"⚠️ 警告: 字段 '{key}' 不在 Sheet 表头中，已忽略")
+            
+            if cells_to_update:
+                sheet.update_cells(cells_to_update)
             
             return True
             

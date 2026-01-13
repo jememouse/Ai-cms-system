@@ -76,7 +76,41 @@ def run():
     for idx, record in enumerate(pending_records):
         print(f"\n--- [{idx + 1}/{len(pending_records)}] 发布: {record.get('Title', '')[:30]}... ---")
         
-        # 转换为 Skill 需要的格式
+        # [Idempotency Check] 防止重复发布
+        # 如果状态是 Pending 但已经有 URL，说明上次发布成功但状态更新失败
+        existing_url = record.get('URL', '').strip()
+        if existing_url and existing_url.startswith('http'):
+            print(f"   ⚠️ 检测到该文章已有 URL ({existing_url})，判断为已发布。")
+            print(f"   🔄 正在修复状态为 Published...")
+            
+            # 修复状态
+            client.update_record(record['record_id'], {
+                "Status": config.STATUS_PUBLISHED
+            })
+            
+            # 同时也确保写入 asset，防止漏掉 SEO 内链
+            article_data_fix = {
+                "title": record.get('Title'),
+                "url": existing_url,
+                "keywords": record.get('关键词'),
+                "category_id": config.CATEGORY_MAP.get(str(record.get('大项分类', '')).strip(), "1"),
+                "summary": record.get('摘要')
+            }
+            _record_to_assets(article_data_fix, existing_url)
+            
+            print(f"   ✅ 状态修复完成，跳过本次重复发布。")
+            continue
+            
+        # [Data Integrity] 发布前强校验
+        title_chk = record.get('Title', '').strip()
+        content_chk = record.get('HTML_Content', '').strip()
+        
+        if not title_chk or len(content_chk) < 50:
+            print(f"   🛑 检测到无效内容 (Title: {bool(title_chk)}, Content Len: {len(content_chk)})")
+            print(f"   🔄 正在将状态重置为 Ready 以便重新生成...")
+            client.update_record(record['record_id'], {"Status": config.STATUS_READY})
+            continue
+
         # 转换为 Skill 需要的格式
         article_data = {
             "title": record.get('Title'),

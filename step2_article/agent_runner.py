@@ -84,10 +84,19 @@ def run():
             # Update Feishu Record (Status: Ready -> Pending)
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
+            # [Data Integrity] 强校验：确保生成的内容有效
+            title = article.get('title', '').strip()
+            content = article.get('html_content', '').strip()
+            
+            if not title or len(content) < 50:
+                print(f"   ⚠️ [Error] 生成内容无效 (Title len: {len(title)}, Content len: {len(content)})")
+                print(f"   🛑 跳过保存，保持 Ready 状态等待重试")
+                continue
+                
             # Fields to update
             fields = {
-                "Title": article.get('title'),
-                "HTML_Content": article.get('html_content'),
+                "Title": title,
+                "HTML_Content": content,
                 "Status": config.STATUS_PENDING,
                 "关键词": article.get('keywords'),
                 "摘要": article.get('summary'),
