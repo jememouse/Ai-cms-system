@@ -51,6 +51,10 @@ class DeepWriteSkill(BaseSkill):
             if resp.status_code == 200:
                 content = resp.json()["choices"][0]["message"]["content"]
                 content = content.replace("```json", "").replace("```", "").strip()
+                
+                # 增强：清洗 JSON 字符串，修复非法转义
+                content = self._sanitize_json(content)
+                
                 # 简单 JSON 提取
                 start = content.find('{')
                 end = content.rfind('}')
@@ -59,6 +63,25 @@ class DeepWriteSkill(BaseSkill):
         except Exception as e:
             print(f"   ❌ Writing Error: {e}")
         return None
+
+    def _sanitize_json(self, text: str) -> str:
+        """
+        清洗 JSON 字符串，修复 DeepSeek 偶尔产生的非法转义字符
+        例如: "10\20" -> "10\\20"
+        """
+        import re
+        # 1. 替换反斜杠：如果反斜杠后面不是合法的转义字符 (", \, /, b, f, n, r, t, uXXXX)，则双写它
+        # 这是一个简单的启发式规则
+        # 正则含义：匹配一个 \，其后跟的不是合法转义字符
+        # 注意：Python 字符串中写正则需要多重转义
+        
+        # 匹配反斜杠，lookahead 及其后的字符不是合法转义
+        # 合法转义: " \ / b f n r t u
+        pattern = r'\\(?![\\"/bfnrtu])'
+        
+        # 将非法的 \ 替换为 \\
+        cleaned_text = re.sub(pattern, r'\\\\', text)
+        return cleaned_text
 
     def execute(self, input_data: Dict) -> Dict:
         """
