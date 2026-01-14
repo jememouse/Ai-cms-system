@@ -138,4 +138,4 @@ MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "18"))     
 PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
 
 # Pollinations AI Configuration
-POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "pk_stu33lc2AgU55DRp")
+POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "sk_JcwCPAlDB5lGqiHjfWTJnq7XYKVpGeNm")
