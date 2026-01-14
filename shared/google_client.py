@@ -269,10 +269,35 @@ class GoogleSheetClient:
 
     def send_notification(self, title: str, content: str) -> bool:
         """
-        发送飞书消息通知
+        发送飞书消息通知（使用 Webhook）
         """
+        import requests
+        
         webhook_url = getattr(config, 'FEISHU_WEBHOOK_URL', None)
-        if not webhook_url: return False
-        # 简化处理，仅打印，或之后恢复 requests 调用
-        print(f"📨 [Notification] {title}: {content}")
-        return True
+        if not webhook_url:
+            print("   ⚠️ 未配置 FEISHU_WEBHOOK_URL，跳过通知")
+            return False
+        
+        try:
+            payload = {
+                "msg_type": "interactive",
+                "card": {
+                    "header": {
+                        "title": {"tag": "plain_text", "content": title},
+                        "template": "blue"
+                    },
+                    "elements": [
+                        {"tag": "div", "text": {"tag": "lark_md", "content": content}}
+                    ]
+                }
+            }
+            resp = requests.post(webhook_url, json=payload, timeout=10)
+            if resp.status_code == 200:
+                print(f"   📨 飞书通知已发送: {title}")
+                return True
+            else:
+                print(f"   ⚠️ 飞书通知失败: {resp.text}")
+                return False
+        except Exception as e:
+            print(f"   ⚠️ 飞书通知异常: {e}")
+            return False
