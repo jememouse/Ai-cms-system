@@ -8,5 +8,5 @@ if ! command -v uv &> /dev/null; then
 fi
 
 echo "🚀 启动节点4: 小红书内容裂变..."
-uv run python step4_social/runner.py
+uv run python step4_social/agent_runner.py
 echo "✅ 节点4执行完毕."
