@@ -284,20 +284,25 @@ class WellCMSPublisher:
                                     else:
                                         raise
                             if resp and resp.status_code == 200:
-                                tmp.write(resp.content)
-                                tmp.flush()
-                                tmp_path = tmp.name
-                                
-                                # 上传到缩略图输入框
-                                # Selector: input element inside the label with class img_1 or data-assoc
-                                # Based on HTML dump: <input type="file" multiple="multiple" data-assoc="img_1">
-                                file_input = self.page.query_selector('input[data-assoc="img_1"]')
-                                if file_input:
-                                    file_input.set_input_files(tmp_path)
-                                    print("      📤 封面图上传中...")
-                                    time.sleep(3) # 等待上传完成
+                                # 检测 Rate Limit 错误图片 (错误图片通常 < 50KB)
+                                MIN_VALID_IMAGE_SIZE = 50 * 1024  # 50KB
+                                if len(resp.content) < MIN_VALID_IMAGE_SIZE:
+                                    print(f"      ⚠️ 检测到可能的速率限制错误图片 (大小: {len(resp.content)} bytes < 50KB)")
+                                    print(f"      ⏭️ 跳过封面上传，文章将以无图形式发布")
+                                    # 不上传封面，跳过后续上传逻辑
                                 else:
-                                    print("      ⚠️ 未找到封面图上传框")
+                                    tmp.write(resp.content)
+                                    tmp.flush()
+                                    tmp_path = tmp.name
+                                    
+                                    # 上传到缩略图输入框
+                                    file_input = self.page.query_selector('input[data-assoc="img_1"]')
+                                    if file_input:
+                                        file_input.set_input_files(tmp_path)
+                                        print(f"      📤 封面图上传中... (大小: {len(resp.content) // 1024}KB)")
+                                        time.sleep(3) # 等待上传完成
+                                    else:
+                                        print("      ⚠️ 未找到封面图上传框")
                             else:
                                 print(f"      ⚠️ 封面图下载失败: {resp.status_code}")
                         except Exception as e:
