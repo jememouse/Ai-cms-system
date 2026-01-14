@@ -108,7 +108,7 @@ class SocialWriterSkill(BaseSkill):
 
 【核心规则】
 {prompt_setting['rule']}
-4. 严格遵守字数限制：标题<{limit_title}字，正文约{limit_content}字。
+4. 严格遵守字数限制：标题<{limit_title}字，正文严格控制在{limit_content}字以内(可少不可多)。
 5. 提取 {limit_kw} 个关键词。
 6. 输出仅限纯文本，严禁包含任何图片URLs、[图片]占位符或Markdown图片语法 ![](...)。
 """
