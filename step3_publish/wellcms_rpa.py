@@ -284,10 +284,10 @@ class WellCMSPublisher:
                                     else:
                                         raise
                             if resp and resp.status_code == 200:
-                                # 检测 Rate Limit 错误图片 (错误图片通常 < 50KB)
-                                MIN_VALID_IMAGE_SIZE = 50 * 1024  # 50KB
+                                # 检测 Rate Limit 错误图片 (错误图片通常 < 10KB)
+                                MIN_VALID_IMAGE_SIZE = 10 * 1024  # 10KB
                                 if len(resp.content) < MIN_VALID_IMAGE_SIZE:
-                                    print(f"      ⚠️ 检测到可能的速率限制错误图片 (大小: {len(resp.content)} bytes < 50KB)")
+                                    print(f"      ⚠️ 检测到可能的速率限制错误图片 (大小: {len(resp.content)} bytes < 10KB)")
                                     print(f"      ⏭️ 跳过封面上传，文章将以无图形式发布")
                                     # 不上传封面，跳过后续上传逻辑
                                 else:
