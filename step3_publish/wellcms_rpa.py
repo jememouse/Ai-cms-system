@@ -254,72 +254,183 @@ class WellCMSPublisher:
             time.sleep(1)
             
             # -------------------------------------------------------------------
-            # 🖼️ 封面图处理 (修复列表页无图问题)
+            # 🖼️ 封面图处理 (多源 Fallback 机制)
             # -------------------------------------------------------------------
             html_content = article.get('html_content', '')
             import re
             img_match = re.search(r'src="([^"]+)"', html_content)
-            if img_match:
-                img_url = img_match.group(1)
-                img_url = img_url.replace('&amp;', '&') # 还原用于下载
-                print(f"      🖼️ 发现封面图: {img_url[:50]}...")
+            
+            # Fallback 图片源列表
+            def _get_unsplash_cover(keywords: str) -> str:
+                """生成 Unsplash Source 备选图片 URL"""
+                search_terms = ["packaging", "gift", "box", "design"]
+                if keywords:
+                    for kw in ["packaging", "box", "paper", "gift", "luxury", "minimal"]:
+                        if kw in keywords.lower():
+                            search_terms.insert(0, kw)
+                            break
+                query = ",".join(search_terms[:2])
+                return f"https://source.unsplash.com/1024x768/?{query}"
+            
+            def _generate_ai_horde_image(prompt: str, timeout: int = 60) -> tuple:
+                """
+                使用 AI Horde (开源众包) 生成 AI 图片
+                https://stablehorde.net/ - 免费、无需注册
+                """
+                import requests
+                import json as json_lib
+                
+                # AI Horde API (匿名访问使用 0000000000 作为 API Key)
+                API_KEY = "0000000000"
+                GENERATE_URL = "https://stablehorde.net/api/v2/generate/async"
+                CHECK_URL = "https://stablehorde.net/api/v2/generate/check/"
+                STATUS_URL = "https://stablehorde.net/api/v2/generate/status/"
+                
+                headers = {
+                    "Content-Type": "application/json",
+                    "apikey": API_KEY
+                }
+                
+                # 简化 prompt 用于快速生成
+                payload = {
+                    "prompt": f"{prompt}, product photography, studio lighting, minimalist style",
+                    "params": {
+                        "width": 1024,
+                        "height": 768,
+                        "steps": 20,
+                        "n": 1
+                    },
+                    "nsfw": False,
+                    "models": ["stable_diffusion"]
+                }
                 
                 try:
-                    # 下载图片
-                    import requests
+                    # 1. 提交生成请求
+                    resp = requests.post(GENERATE_URL, headers=headers, json=payload, timeout=15)
+                    if resp.status_code != 202:
+                        logger.debug(f"AI Horde 提交失败: {resp.status_code}")
+                        return None, False
+                    
+                    job_id = resp.json().get("id")
+                    if not job_id:
+                        return None, False
+                    
+                    # 2. 轮询等待完成 (最多等待 timeout 秒)
+                    start_time = time.time()
+                    while time.time() - start_time < timeout:
+                        check_resp = requests.get(f"{CHECK_URL}{job_id}", timeout=10)
+                        if check_resp.status_code == 200:
+                            data = check_resp.json()
+                            if data.get("done"):
+                                break
+                            if data.get("faulted"):
+                                logger.debug("AI Horde 生成失败")
+                                return None, False
+                        time.sleep(3)
+                    else:
+                        logger.debug("AI Horde 生成超时")
+                        return None, False
+                    
+                    # 3. 获取结果
+                    status_resp = requests.get(f"{STATUS_URL}{job_id}", timeout=10)
+                    if status_resp.status_code == 200:
+                        generations = status_resp.json().get("generations", [])
+                        if generations and generations[0].get("img"):
+                            # AI Horde 返回 base64 编码的图片
+                            import base64
+                            img_data = base64.b64decode(generations[0]["img"])
+                            if len(img_data) >= 10 * 1024:
+                                return img_data, True
+                    
+                except Exception as e:
+                    logger.debug(f"AI Horde 异常: {e}")
+                
+                return None, False
+            
+            def _download_image(url: str, timeout: int = 30) -> tuple:
+                """下载图片，返回 (content, is_valid)"""
+                import requests
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                }
+                MIN_VALID_SIZE = 10 * 1024  # 10KB
+                
+                for retry in range(3):
+                    try:
+                        resp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+                        if resp.status_code == 200 and len(resp.content) >= MIN_VALID_SIZE:
+                            return resp.content, True
+                        elif resp.status_code == 200:
+                            logger.warning(f"图片太小 ({len(resp.content)} bytes)，可能是限流")
+                            return None, False
+                    except requests.exceptions.Timeout:
+                        if retry < 2:
+                            logger.debug(f"下载超时，重试 {retry + 1}/3...")
+                            time.sleep(2)
+                    except Exception as e:
+                        logger.debug(f"下载异常: {e}")
+                        break
+                return None, False
+            
+            if img_match:
+                img_url = img_match.group(1)
+                img_url = img_url.replace('&amp;', '&')
+                logger.info(f"发现封面图: {img_url[:50]}...")
+                
+                try:
                     import tempfile
                     
-                    # 使用临时文件
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-                        try:
-                            headers = {
-                                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
-                            }
-                            # 重试机制 (Pollinations.ai 响应较慢)
-                            resp = None
-                            for retry in range(3):
-                                try:
-                                    resp = requests.get(img_url, headers=headers, timeout=30)
-                                    if resp.status_code == 200:
-                                        break
-                                except requests.exceptions.Timeout:
-                                    if retry < 2:
-                                        print(f"      ⏳ 封面图下载超时，重试 {retry + 1}/3...")
-                                        time.sleep(2)
-                                    else:
-                                        raise
-                            if resp and resp.status_code == 200:
-                                # 检测 Rate Limit 错误图片 (错误图片通常 < 10KB)
-                                MIN_VALID_IMAGE_SIZE = 10 * 1024  # 10KB
-                                if len(resp.content) < MIN_VALID_IMAGE_SIZE:
-                                    print(f"      ⚠️ 检测到可能的速率限制错误图片 (大小: {len(resp.content)} bytes < 10KB)")
-                                    print(f"      ⏭️ 跳过封面上传，文章将以无图形式发布")
-                                    # 不上传封面，跳过后续上传逻辑
-                                else:
-                                    tmp.write(resp.content)
-                                    tmp.flush()
-                                    tmp_path = tmp.name
-                                    
-                                    # 上传到缩略图输入框
-                                    file_input = self.page.query_selector('input[data-assoc="img_1"]')
-                                    if file_input:
-                                        file_input.set_input_files(tmp_path)
-                                        logger.info(f"封面图上传中... (大小: {len(resp.content) // 1024}KB)")
-                                        time.sleep(3) # 等待上传完成
-                                    else:
-                                        logger.warning("未找到封面图上传框")
+                    # 尝试多源下载
+                    image_content = None
+                    source_name = ""
+                    
+                    # 方案1: 原始图片 (Pollinations.AI)
+                    image_content, is_valid = _download_image(img_url)
+                    if is_valid:
+                        source_name = "Pollinations"
+                    
+                    # 方案2: AI Horde Fallback (免费 AI 生成)
+                    if not image_content:
+                        logger.info("主图片源失败，尝试 AI Horde Fallback...")
+                        # 从关键词构建简单 prompt
+                        keywords = article.get('keywords', 'packaging box')
+                        image_content, is_valid = _generate_ai_horde_image(keywords, timeout=45)
+                        if is_valid:
+                            source_name = "AI Horde"
+                    
+                    # 方案3: Unsplash Fallback (真实照片)
+                    if not image_content:
+                        logger.info("AI Horde 失败，尝试 Unsplash Fallback...")
+                        fallback_url = _get_unsplash_cover(article.get('keywords', ''))
+                        image_content, is_valid = _download_image(fallback_url, timeout=15)
+                        if is_valid:
+                            source_name = "Unsplash"
+                    
+                    # 上传图片
+                    if image_content:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                            tmp.write(image_content)
+                            tmp.flush()
+                            tmp_path = tmp.name
+                            
+                            file_input = self.page.query_selector('input[data-assoc="img_1"]')
+                            if file_input:
+                                file_input.set_input_files(tmp_path)
+                                logger.info(f"封面图上传成功 [{source_name}] ({len(image_content) // 1024}KB)")
+                                time.sleep(3)
                             else:
-                                logger.warning(f"封面图下载失败: {resp.status_code}")
-                        except Exception as e:
-                            logger.warning(f"封面图处理异常: {e}")
-                        finally:
+                                logger.warning("未找到封面图上传框")
+                            
                             # 清理临时文件
                             try:
                                 os.unlink(tmp_path)
                             except Exception as e:
                                 logger.debug(f"清理临时文件失败: {e}")
+                    else:
+                        logger.warning("所有图片源均失败，文章将无封面发布")
+                        
                 except Exception as e:
-                     logger.error(f"封面图逻辑错误: {e}")
+                    logger.error(f"封面图逻辑错误: {e}")
             # -------------------------------------------------------------------
             
             # 填写 SEO 字段
