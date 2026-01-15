@@ -4,6 +4,7 @@ import requests
 import re
 import json
 import time
+import logging
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -13,6 +14,9 @@ from shared import config
 
 # 加载 .env 环境变量
 load_dotenv()
+
+# 配置 logger
+logger = logging.getLogger(__name__)
 
 class TrendSearchSkill(BaseSkill):
     """
@@ -190,7 +194,8 @@ class TrendSearchSkill(BaseSkill):
                 if match:
                     words = json.loads(match.group(1).replace("'", '"'))[:5]
                     suggestions.extend([f"[搜索需求] {w}" for w in words])
-            except: pass
+            except Exception as e:
+                logger.debug(f"[百度建议] {seed} 抓取失败: {e}")
         return suggestions
 
     def _fetch_1688_suggestions(self, seeds):
@@ -203,7 +208,8 @@ class TrendSearchSkill(BaseSkill):
                 data = resp.json()
                 if "result" in data:
                     suggestions.extend([f"[1688采购] {i['q']}" for i in data['result'][:5]])
-             except: pass
+             except Exception as e:
+                logger.debug(f"[1688建议] {seed} 抓取失败: {e}")
         return suggestions
 
     def _fetch_taobao_suggestions(self, seeds):
@@ -216,7 +222,8 @@ class TrendSearchSkill(BaseSkill):
                 data = resp.json()
                 if "result" in data:
                     suggestions.extend([f"[淘宝热搜] {i[0]}" for i in data['result'][:5]])
-            except: pass
+            except Exception as e:
+                logger.debug(f"[淘宝建议] {seed} 抓取失败: {e}")
         return suggestions
     
     def _fetch_zhihu_hot_questions(self, seeds):
@@ -236,7 +243,8 @@ class TrendSearchSkill(BaseSkill):
                             if title:
                                 clean = re.sub(r'<[^>]+>', '', title)
                                 questions.append(f"[知乎问答] {clean}")
-            except: pass
+            except Exception as e:
+                logger.debug(f"[知乎问答] {seed} 抓取失败: {e}")
         return list(set(questions))
 
     def _fetch_xiaohongshu_trends(self, seeds):
@@ -254,7 +262,8 @@ class TrendSearchSkill(BaseSkill):
                             if any(k in item.get("title", "") for k in ["包装","礼盒","送礼"]):
                                 trends.append(f"[小红书] {item['title']}")
                         break
-            except: pass
+            except Exception as e:
+                logger.debug(f"[小红书] {seed} 抓取失败: {e}")
         
         scenes = ["开箱体验","送礼推荐","高级感包装"]
         for seed in random.sample(seeds, min(3, len(seeds))):
@@ -273,5 +282,6 @@ class TrendSearchSkill(BaseSkill):
                 data = json.loads(text)
                 for t in data.get("default", {}).get("topics", [])[:3]:
                     trends.append(f"[谷歌趋势] {t['title']}")
-            except: pass
+            except Exception as e:
+                logger.debug(f"[谷歌趋势] {kw} 抓取失败: {e}")
         return list(set(trends))

@@ -3,12 +3,17 @@ import os
 import json
 import requests
 import re
+import random
+import logging
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.skill import BaseSkill
 from shared import config
+
+# 配置 logger
+logger = logging.getLogger(__name__)
 
 class TopicAnalysisSkill(BaseSkill):
     """
@@ -22,7 +27,8 @@ class TopicAnalysisSkill(BaseSkill):
         self.api_key = config.LLM_API_KEY
         self.api_url = config.LLM_API_URL
 
-    def _call_deepseek(self, prompt: str) -> Dict:
+    def _call_deepseek(self, prompt: str) -> Optional[Dict]:
+        """调用 LLM API，带健壮的 JSON 解析"""
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         if "openrouter" in self.api_url:
             headers["HTTP-Referer"] = "https://github.com/jememouse/deepseek-feisu-cms"
@@ -37,9 +43,46 @@ class TopicAnalysisSkill(BaseSkill):
             if resp.status_code == 200:
                 content = resp.json()['choices'][0]['message']['content']
                 content = content.replace("```json", "").replace("```", "").strip()
-                return json.loads(content)
+                return self._extract_json(content)
+            else:
+                logger.warning(f"LLM API 返回状态码: {resp.status_code}")
         except Exception as e:
-            print(f"   ❌ LLM Error: {e}")
+            logger.error(f"LLM 调用错误: {e}")
+        return None
+    
+    def _extract_json(self, content: str) -> Optional[Dict]:
+        """从 LLM 响应中提取 JSON，支持多种格式"""
+        # 方法1：直接解析
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+        
+        # 方法2：正则匹配 JSON 数组或对象
+        json_match = re.search(r'[\[\{][\s\S]*[\]\}]', content)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+        
+        # 方法3：逐字符追踪括号
+        depth = 0
+        start_idx = -1
+        for i, char in enumerate(content):
+            if char in '[{':
+                if depth == 0:
+                    start_idx = i
+                depth += 1
+            elif char in ']}':
+                depth -= 1
+                if depth == 0 and start_idx != -1:
+                    try:
+                        return json.loads(content[start_idx:i+1])
+                    except json.JSONDecodeError:
+                        start_idx = -1
+        
+        logger.warning("无法从 LLM 响应中提取有效 JSON")
         return None
 
     def execute(self, input_data: Dict) -> List[Dict]:
@@ -72,8 +115,11 @@ class TopicAnalysisSkill(BaseSkill):
 
     def _analyze_trends(self, trends):
         trends_str = "\n".join([f"- {t}" for t in trends])
-        # Define selected_city or get it from config if needed, for now, a placeholder
-        selected_city = "上海" # Placeholder for demonstration
+        
+        # 动态选择城市 (GEO 策略)
+        GEO_CITIES = ["东莞", "深圳", "广州", "上海", "杭州", "苏州", "义乌", "佛山"]
+        selected_city = random.choice(GEO_CITIES)
+        
         prompt = f"""
         我们是一家 **"包装在线定制电商平台（强大的供应链及品质管理+交付系统）"** （盒艺家）。
         你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 强大的供应链及品质管理+交付系统）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
@@ -132,15 +178,20 @@ class TopicAnalysisSkill(BaseSkill):
         topic = trend.get('topic', '')
         angle = trend.get('angle', '')
         
+        # 动态获取当前年份
+        current_year = datetime.now().year
+        
         prompt = f"""
         背景：{brand_name} (既接B2B大单，也接B2C小单，**1个起订**)
         热点：{topic} (角度: {angle})
+        当前年份：{current_year}年
         
         任务：生成 6 个高点击率 Title。
         要求：
         1. **混合策略**：生成的6个标题中，必须严格按照 **2个专业知识 + 2个行业资讯 + 2个产品介绍** 的比例分配。至少有2个体现 "小批量/定制/个性化" 等 B2C 痛点，其余体现 B2B 专业性。
-        2. 2026年，**严格控制在 16 个字符以内 (按双字节汉字计算)**。
-        3. 绝大部分不要出现品牌词。
+        2. **字数控制**：严格控制在 16 个字符以内 (按双字节汉字计算)。
+        3. **年份要求**：如果标题涉及年份，必须使用 {current_year}年，禁止使用过去年份。
+        4. 绝大部分不要出现品牌词。
         4. 必须覆盖以下3种分类风格，并**随机(10-20%概率)插入“案例/故事”类标题**：
            - **专业知识**：风格为“干货/指南/避坑/解析”。**必须包含“结合当前热点({topic})的深度案例复盘”**（如：“案例解析：{topic}如何帮助这家店销量翻倍...”）。
            - **行业资讯**：风格为“趋势/数据/新规/行情”。
