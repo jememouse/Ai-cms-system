@@ -350,15 +350,27 @@ class WellCMSPublisher:
             def _download_image(url: str, timeout: int = 30) -> tuple:
                 """下载图片，返回 (content, is_valid)"""
                 import requests
+                import hashlib
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
                 }
                 MIN_VALID_SIZE = 10 * 1024  # 10KB
                 
+                # Pollinations.AI 速率限制图 MD5 黑名单
+                # 这些是已知的"Your prompt is fine! You've just hit the anonymous tier limit."提示图
+                RATE_LIMIT_IMAGE_HASHES = {
+                    "12aff62f69f5c0a5798c6f2d15dfa3c1",  # 1024x1360 版本
+                }
+                
                 for retry in range(3):
                     try:
                         resp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
                         if resp.status_code == 200 and len(resp.content) >= MIN_VALID_SIZE:
+                            # 🔍 检测是否为速率限制图
+                            content_hash = hashlib.md5(resp.content).hexdigest()
+                            if content_hash in RATE_LIMIT_IMAGE_HASHES:
+                                logger.warning(f"检测到 Pollinations 速率限制图 (MD5: {content_hash})")
+                                return None, False
                             return resp.content, True
                         elif resp.status_code == 200:
                             logger.warning(f"图片太小 ({len(resp.content)} bytes)，可能是限流")
@@ -371,6 +383,7 @@ class WellCMSPublisher:
                         logger.debug(f"下载异常: {e}")
                         break
                 return None, False
+
             
             if img_match:
                 img_url = img_match.group(1)
