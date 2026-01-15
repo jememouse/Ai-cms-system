@@ -3,11 +3,21 @@ import os
 import json
 import requests
 import random
+import logging
+import time
+from datetime import datetime
 from typing import Dict, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.skill import BaseSkill
 from shared import config
+
+# 配置 logger
+logger = logging.getLogger(__name__)
+
+# 重试配置
+MAX_RETRIES = 2
+RETRY_DELAY = 1.0
 
 class DeepWriteSkill(BaseSkill):
     """
@@ -30,38 +40,100 @@ class DeepWriteSkill(BaseSkill):
                 self.brand_config = json.load(f)
 
     def _call_llm(self, prompt: str) -> Optional[Dict]:
+        """
+        调用 LLM API，带重试机制和健壮的 JSON 解析
+        """
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         if "openrouter" in self.api_url:
             headers["HTTP-Referer"] = "https://heyijiapack.com"
             headers["X-Title"] = "DeepSeek CMS Agent"
-            
-        try:
-            resp = requests.post(
-                self.api_url,
-                headers=headers,
-                json={
-                    "model": self.model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.7,
-                    "max_tokens": 4500,
-                    "stream": False
-                },
-                timeout=(30, 300)
-            )
-            if resp.status_code == 200:
+        
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = requests.post(
+                    self.api_url,
+                    headers=headers,
+                    json={
+                        "model": self.model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.7,
+                        "max_tokens": 4500,
+                        "stream": False
+                    },
+                    timeout=(30, 300)
+                )
+                
+                if resp.status_code != 200:
+                    logger.warning(f"LLM API 返回非 200 状态码: {resp.status_code}, 第 {attempt + 1} 次尝试")
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(RETRY_DELAY)
+                    continue
+                
                 content = resp.json()["choices"][0]["message"]["content"]
                 content = content.replace("```json", "").replace("```", "").strip()
                 
                 # 增强：清洗 JSON 字符串，修复非法转义
                 content = self._sanitize_json(content)
                 
-                # 简单 JSON 提取
-                start = content.find('{')
-                end = content.rfind('}')
-                if start != -1 and end > start:
-                    return json.loads(content[start:end+1])
-        except Exception as e:
-            print(f"   ❌ Writing Error: {e}")
+                # 使用增强的 JSON 提取方法
+                result = self._extract_json(content)
+                if result:
+                    return result
+                    
+                logger.warning(f"JSON 解析失败, 第 {attempt + 1} 次尝试")
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY)
+                    
+            except requests.exceptions.Timeout as e:
+                logger.error(f"LLM API 超时: {e}, 第 {attempt + 1} 次尝试")
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY)
+            except Exception as e:
+                logger.error(f"LLM 调用错误: {e}", exc_info=True)
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY)
+        
+        logger.error(f"LLM 调用失败，已达最大重试次数 ({MAX_RETRIES})")
+        return None
+    
+    def _extract_json(self, content: str) -> Optional[Dict]:
+        """
+        从 LLM 响应中提取 JSON，支持多种格式
+        """
+        import re
+        
+        # 方法1：尝试直接解析整个内容
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+        
+        # 方法2：使用正则找到最外层的 JSON 对象
+        # 匹配从第一个 { 到最后一个 } 的内容
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+        
+        # 方法3：遍历所有可能的 JSON 块
+        depth = 0
+        start_idx = -1
+        for i, char in enumerate(content):
+            if char == '{':
+                if depth == 0:
+                    start_idx = i
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0 and start_idx != -1:
+                    try:
+                        return json.loads(content[start_idx:i+1])
+                    except json.JSONDecodeError:
+                        start_idx = -1
+        
+        logger.warning("无法从 LLM 响应中提取有效 JSON")
         return None
 
     def _sanitize_json(self, text: str) -> str:
@@ -181,7 +253,12 @@ class DeepWriteSkill(BaseSkill):
             scenario = random.choice(scenarios)
             
             return f"""
-            【当前模式：深度案例复盘 (Professional Case Analysis)】
+            【当前模式：深度案例复盘 (Professional Case Analysis) - {scenario['type']}】
+            
+            🎭 **本案例人设**：{scenario['role']}
+            💔 **核心痛点**：{scenario['pain']}
+            ✅ **解决收益**：{scenario['gain']}
+            
             🧩 **核心原则**：
             1. **干货化复盘**：严禁写成只讲情绪的“软文故事”。必须写成一篇能够指导同类客户的“商业教案”。
             2. **结构要求 (STAR原则改编)**：
@@ -227,6 +304,9 @@ class DeepWriteSkill(BaseSkill):
             """
 
     def _build_prompt(self, topic, category, category_id, brand_name, selected_city, geo_context, rag_context, category_instruction):
+        # 动态获取当前年份
+        current_year = datetime.now().year
+        
         # 内链策略
         INTERNAL_LINKS = {
             "专业知识": {"url": "/news/list-1.html", "anchor": "查看更多包装干货"},
@@ -265,6 +345,22 @@ class DeepWriteSkill(BaseSkill):
         {category_instruction}
         
         {rag_context}
+
+        【📅 时效性要求 (至关重要)】
+        1. **当前年份**：现在是 **{current_year}年**。文章中涉及年份的描述必须以 {current_year}年 为基准。
+        2. **避免过时表述**：不要使用"2023年"、"2024年"等过去年份作为"最新"或"当前"的表述。
+        3. **时间引用规范**：
+           - 如需引用未来趋势：使用 "{current_year}年及以后"
+           - 如需引用近期数据：使用 "截至{current_year}年"、"{current_year}年最新数据显示"
+           - 如需引用行业历史：可使用过去年份，但需明确标注为历史回顾
+        4. **标题/URL Slug**：如包含年份，必须使用 {current_year} (例如: "packaging-trends-{current_year}")
+
+        【🏆 E-E-A-T 权威性增强 (百度/Google 排名关键)】
+        1. **作者信息**：在文章开头或结尾添加作者声明，如"本文由盒艺家资深包装顾问撰写，拥有10年+行业经验"。
+        2. **数据来源标注**：引用数据时要标明来源（如"根据中国包装联合会{current_year}年报告"、"据《包装世界》杂志统计"）。
+        3. **专业术语解释**：首次出现的专业术语/缩写应添加简短解释，体现专业严谨。
+        4. **实操经验**：适当加入"根据我们服务的300+品牌客户反馈..."等实战经验描述。
+        5. **审核声明** (可选)：在专业知识类文章末尾添加"本文内容经工程团队审核"。
         
         【SEO写作要求 (百度优化版)】
         1. **结构**: 
