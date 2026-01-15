@@ -146,7 +146,6 @@ class TopicAnalysisSkill(BaseSkill):
         target_count = 20
         if len(analyzed_trends) < target_count:
             print(f"⚠️ [Topics] LLM仅返回 {len(analyzed_trends)} 个 (目标{target_count})，启动自动补全...")
-            import random
             
             # 1. 提取已有的 topics 以避免重复
             existing_topics = {t.get("topic", "") for t in analyzed_trends}
