@@ -6,11 +6,16 @@ WellCMS RPA 发布器
 import sys
 import os
 import time
+import logging
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import Dict, Tuple, Optional
 from playwright.sync_api import sync_playwright, Page, Browser
 from shared import config
+
+# 配置 logger
+logger = logging.getLogger(__name__)
 
 
 class WellCMSPublisher:
@@ -124,12 +129,12 @@ class WellCMSPublisher:
         Step 1: https://heyijiapack.com/news/user-login.html
         Step 2: https://heyijiapack.com/news/admin/index.php
         """
-        print("      🔐 [RPA] 启动精确匹配登录流程...")
+        logger.info("[RPA] 启动精确匹配登录流程...")
         try:
             # ==================================================================
             # Step 1: 前台登录
             # ==================================================================
-            print(f"      📍 [Step 1] 访问前台: {self.login_url}")
+            logger.info(f"[Step 1] 访问前台: {self.login_url}")
             if not self._safe_goto(self.login_url):
                 return False
             
@@ -299,22 +304,22 @@ class WellCMSPublisher:
                                     file_input = self.page.query_selector('input[data-assoc="img_1"]')
                                     if file_input:
                                         file_input.set_input_files(tmp_path)
-                                        print(f"      📤 封面图上传中... (大小: {len(resp.content) // 1024}KB)")
+                                        logger.info(f"封面图上传中... (大小: {len(resp.content) // 1024}KB)")
                                         time.sleep(3) # 等待上传完成
                                     else:
-                                        print("      ⚠️ 未找到封面图上传框")
+                                        logger.warning("未找到封面图上传框")
                             else:
-                                print(f"      ⚠️ 封面图下载失败: {resp.status_code}")
+                                logger.warning(f"封面图下载失败: {resp.status_code}")
                         except Exception as e:
-                            print(f"      ⚠️ 封面图处理异常: {e}")
+                            logger.warning(f"封面图处理异常: {e}")
                         finally:
                             # 清理临时文件
                             try:
                                 os.unlink(tmp_path)
-                            except:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"清理临时文件失败: {e}")
                 except Exception as e:
-                     print(f"      ⚠️ 封面图逻辑错误: {e}")
+                     logger.error(f"封面图逻辑错误: {e}")
             # -------------------------------------------------------------------
             
             # 填写 SEO 字段
@@ -410,7 +415,8 @@ class WellCMSPublisher:
                         
                         if target_frame:
                             # 直接写入 iframe body
-                            target_frame.evaluate(f"document.body.innerHTML = `{html_content.replace('`', '\\\\`')}`")
+                            escaped_content = html_content.replace("`", "\\`")
+                            target_frame.evaluate(f"document.body.innerHTML = `{escaped_content}`")
                             # 同步回 textarea (尝试触发编辑器的 sync)
                             self.page.evaluate("""() => {
                                 if (typeof UM !== 'undefined') UM.getEditor('message').sync();
@@ -429,10 +435,8 @@ class WellCMSPublisher:
                         time.sleep(2) # 注入后等待渲染
                         injection_successful = True
                         break
-                        print(f"      ⚠️ 内容注入失败，重试 {attempt + 1}/3...")
-                        time.sleep(2)
                 except Exception as e:
-                    print(f"      ⚠️ 注入异常: {e}")
+                    logger.warning(f"注入异常 (尝试 {attempt + 1}/3): {e}")
                     time.sleep(2)
             
             time.sleep(2)
@@ -441,10 +445,11 @@ class WellCMSPublisher:
             # 点击提交并等待跳转
             # 🚨 终极保险：强制将内容同步到 textarea
             # 无论之前的注入方式如何，提交前必须确保 textarea 有值，因为表单提交的是 textarea
+            escaped_html = html_content.replace('`', '\\`')
             self.page.evaluate(f"""() => {{
                 var el = document.querySelector('textarea[name="message"]');
                 if (el) {{
-                    el.value = `{html_content.replace('`', '\\\\`')}`;
+                    el.value = `{escaped_html}`;
                 }}
             }}""")
             print("      🛡️ 已强制同步内容到 Textarea")
@@ -546,13 +551,13 @@ class WellCMSPublisher:
                 print("      ⚠️ 未能提取 TID (遍历所有 Frame 后)，使用当前页面 URL")
                 current_url = self.page.url
             
-            print(f"   ✅ 文章发布成功: {article.get('title', '')}")
-            print(f"   🔗 链接: {current_url}")
+            logger.info(f"文章发布成功: {article.get('title', '')}")
+            logger.info(f"链接: {current_url}")
             
             return True, current_url
             
         except Exception as e:
-            print(f"   ❌ 发布失败: {e}")
+            logger.error(f"发布失败: {e}")
             return False, ""
     
     def publish(self, article: Dict) -> Tuple[bool, str]:
