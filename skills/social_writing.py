@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import re
+import random
 from typing import Dict, Any
 
 from core.skill import BaseSkill
@@ -102,6 +103,19 @@ class SocialWriterSkill(BaseSkill):
         
         print(f"      ✍️ [Skill] 激活人设: 【{prompt_setting['role']}】 -> 创作 {p_name} 内容...")
         
+        # [Feature] 强制随机开场策略，解决 "兄弟们" 重复问题
+        OPENING_STYLES = [
+            "【提问开场】：用一个扎心的反问句开头，直击痛点。禁止使用'大家好'。",
+            "【数据开场】：直接抛出一个惊人的行业数据或对比结论。禁止使用'兄弟们'。",
+            "【故事开场】：用'我有个朋友...'或'昨天遇到个客户...'这种真实场景开头。",
+            "【观点开场】：开门见山抛出违反常识的暴论或独家观点。",
+            "【场景开场】：描述一个具体的焦虑场景，让用户对号入座。",
+            "【悬念开场】：'你绝对想不到...'，设置巨大悬念。",
+            "【避坑开场】：'千万别再...'，直接警告用户。",
+            "【金句开场】：引用或创造一句行业金句。"
+        ]
+        selected_opening = random.choice(OPENING_STYLES)
+        
         # 1. 构造 System Prompt (预留缓冲: 告诉AI目标比实际限制少2字)
         effective_title_limit = limit_title - 2  # 18 -> 16
         system_prompt = f"""你现在的身份是：{prompt_setting['role']}。
@@ -114,6 +128,10 @@ class SocialWriterSkill(BaseSkill):
 5. 正文严格控制在 {limit_content} 字以内（可少不可多）。
 6. 提取 {limit_kw} 个关键词。
 7. 输出仅限纯文本，严禁包含任何图片URLs、[图片]占位符或Markdown图片语法 ![](...)。
+
+【强制开场指令】
+本次写作必须使用 {selected_opening}
+严禁使用'兄弟们'、'家人们'、'大家好'、'各位观众老爷'等陈词滥调作为第一个词！
 """
 
         # 2. 构造 User Prompt (含 Few-shot 示例)
