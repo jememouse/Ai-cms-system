@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import re
 from typing import Dict, Any
 
 from core.skill import BaseSkill
@@ -152,8 +153,21 @@ class SocialWriterSkill(BaseSkill):
             end = content_str.rfind("}")
             if start != -1 and end != -1:
                 json_str = content_str[start:end+1]
-                data = json.loads(json_str)
-                return data
+                
+                # [Fix] JSON Cleaning for robustness
+                # 1. Remove invalid control characters (0x00-0x1f) except \n, \r, \t
+                json_str = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', json_str)
+                
+                # 2. Use strict=False to allow control chars inside strings (e.g. unescaped newlines)
+                try:
+                    data = json.loads(json_str, strict=False)
+                    return data
+                except json.JSONDecodeError:
+                    # Retry: sometimes AI puts newlines that break JSON. try to escape key newline chars?
+                    # Simplified fallback: simply try without strict=False (unlikely to help if strict=False failed)
+                    # Let's try to grab just keywords if title/content is broken?
+                    # For now, just let it fail to the outer except block which prints the error
+                    raise
             else:
                 # Fallback extraction if JSON fails
                 return {
