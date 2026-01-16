@@ -55,8 +55,18 @@ def run():
             if today_str in gen_time:
                 today_count += 1
                 
-        remaining_quota = p_target - today_count
-        print(f"   📊 今日进度: {today_count}/{p_target} (剩余: {remaining_quota})")
+        # 运行模式判断
+        run_mode = os.getenv("SOCIAL_RUN_MODE", "accumulate")
+        
+        if run_mode == "batch":
+            # [Batch Mode] 手动触发，视为增量生成，不减去今日已发
+            # 这里的 p_target 就是用户输入的数字 (例如 100)
+            remaining_quota = p_target
+            print(f"   🚀 [Batch Mode] 手动增量模式: 忽略今日已发 ({today_count})，全力生成目标: {remaining_quota}")
+        else:
+            # [Accumulate Mode] 定时任务，补齐水位
+            remaining_quota = p_target - today_count
+            print(f"   📊 [Accumulate Mode] 水位补齐模式: {today_count}/{p_target} (剩余需补: {remaining_quota})")
         
         if remaining_quota <= 0:
             print(f"   ✅ 今日配额已满，跳过。")

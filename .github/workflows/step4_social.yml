@@ -4,7 +4,43 @@ on:
   schedule:
     # 北京时间 06:30 (确保 7:00 前完成) -> UTC 22:30
     - cron: '30 22 * * *'
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      douyin_target:
+        description: 'Douyin Daily Target'
+        required: false
+        default: '100'
+        type: string
+      wechat_video_target:
+        description: 'WeChat Video Daily Target'
+        required: false
+        default: '100'
+        type: string
+      xhs_target:
+        description: 'XHS Daily Target'
+        required: false
+        default: '100'
+        type: string
+      kuaishou_target:
+        description: 'Kuaishou Daily Target'
+        required: false
+        default: '100'
+        type: string
+      baijiahao_target:
+        description: 'Baijiahao Daily Target'
+        required: false
+        default: '100'
+        type: string
+      weibo_target:
+        description: 'Weibo Daily Target'
+        required: false
+        default: '100'
+        type: string
+      bilibili_target:
+        description: 'Bilibili Daily Target'
+        required: false
+        default: '100'
+        type: string
 
 jobs:
   step4-social:
@@ -35,7 +71,19 @@ jobs:
         FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         FEISHU_XHS_TABLE_ID: ${{ secrets.FEISHU_XHS_TABLE_ID }}
         
-        
+        # Dynamic Quotas (Inputs take precedence, mostly for manual runs)
+        # Note: Scheduled runs won't have inputs, so we rely on Python defaulting to os.getenv or hardcoded fallback if var is missing.
+        # But here we map input -> env if input exists. 
+        # For scheduled runs, these inputs are empty/null.
+        # We explicitly set them only if inputs are provided.
+        DOUYIN_DAILY_TARGET: ${{ inputs.douyin_target }}
+        WECHAT_VIDEO_DAILY_TARGET: ${{ inputs.wechat_video_target }}
+        XHS_DAILY_TARGET: ${{ inputs.xhs_target }}
+        KUAISHOU_DAILY_TARGET: ${{ inputs.kuaishou_target }}
+        BAIJIAHAO_DAILY_TARGET: ${{ inputs.baijiahao_target }}
+        WEIBO_DAILY_TARGET: ${{ inputs.weibo_target }}
+        BILIBILI_DAILY_TARGET: ${{ inputs.bilibili_target }}
+
         # Runtime Config
         MAX_DAILY_XHS: 10
         TZ: 'Asia/Shanghai'
@@ -43,5 +91,8 @@ jobs:
         GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+        
+        # Run Mode: 'batch' for manual (ignore past count), 'accumulate' for scheduled (fill quota)
+        SOCIAL_RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && 'batch' || 'accumulate' }}
       run: |
         uv run python -m step4_social.agent_runner

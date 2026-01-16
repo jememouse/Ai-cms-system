@@ -46,7 +46,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 4,
-        "daily_target": 15
+        "daily_target": int(os.getenv("DOUYIN_DAILY_TARGET") or 15)
     },
     "wechat_video": {
         "name": "微信视频",
@@ -55,7 +55,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 4,
-        "daily_target": 12
+        "daily_target": int(os.getenv("WECHAT_VIDEO_DAILY_TARGET") or 12)
     },
     "xhs": {
         "name": "小红书",
@@ -64,7 +64,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 4,
-        "daily_target": 15
+        "daily_target": int(os.getenv("XHS_DAILY_TARGET") or 15)
     },
     "kuaishou": {
         "name": "快手",
@@ -73,7 +73,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18,
         "content_limit": 400, # 短快
         "keywords_limit": 4,
-        "daily_target": 15
+        "daily_target": int(os.getenv("KUAISHOU_DAILY_TARGET") or 15)
     },
     "baijiahao": {
         "name": "百家号",
@@ -82,7 +82,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 1, # 只要一个精准词
-        "daily_target": 15
+        "daily_target": int(os.getenv("BAIJIAHAO_DAILY_TARGET") or 15)
     },
     "weibo": {
         "name": "微博",
@@ -91,7 +91,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18, # 微博其实没标题，这里指第一句
         "content_limit": 900,
         "keywords_limit": 4,
-        "daily_target": 15
+        "daily_target": int(os.getenv("WEIBO_DAILY_TARGET") or 15)
     },
     "bilibili": {
         "name": "BILIBILI",
@@ -100,7 +100,7 @@ SOCIAL_PLATFORMS = {
         "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 10, # B站tag多
-        "daily_target": 6
+        "daily_target": int(os.getenv("BILIBILI_DAILY_TARGET") or 6)
     }
 }
 # 旧配置兼容
