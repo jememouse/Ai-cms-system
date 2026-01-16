@@ -101,19 +101,21 @@ class SocialWriterSkill(BaseSkill):
         
         print(f"      ✍️ [Skill] 激活人设: 【{prompt_setting['role']}】 -> 创作 {p_name} 内容...")
         
-        # 1. 构造 System Prompt
+        # 1. 构造 System Prompt (预留缓冲: 告诉AI目标比实际限制少2字)
+        effective_title_limit = limit_title - 2  # 18 -> 16
         system_prompt = f"""你现在的身份是：{prompt_setting['role']}。
 你的写作风格是：{prompt_setting['style']}。
 任务描述：{prompt_setting['desc']}
 
 【核心规则】
 {prompt_setting['rule']}
-4. 严格遵守字数限制：标题<{limit_title}字，正文严格控制在{limit_content}字以内(可少不可多)。
-5. 提取 {limit_kw} 个关键词。
-6. 输出仅限纯文本，严禁包含任何图片URLs、[图片]占位符或Markdown图片语法 ![](...)。
+4. 【硬性要求】标题必须控制在 {effective_title_limit} 字以内，绝对不能超过！这是最重要的规则。
+5. 正文严格控制在 {limit_content} 字以内（可少不可多）。
+6. 提取 {limit_kw} 个关键词。
+7. 输出仅限纯文本，严禁包含任何图片URLs、[图片]占位符或Markdown图片语法 ![](...)。
 """
 
-        # 2. 构造 User Prompt
+        # 2. 构造 User Prompt (含 Few-shot 示例)
         user_prompt = f"""
 请将这篇枯燥的文章重写为一篇精彩的【{p_name}】爆款内容：
 
@@ -121,9 +123,15 @@ class SocialWriterSkill(BaseSkill):
 【原文片段】：
 {s_content[:2000]}...
 
+【标题示例】（注意：标题必须≤{effective_title_limit}字，以下是合格示例）：
+✅ "包装设计三大误区" (7字)
+✅ "纸盒选材避坑指南" (7字)  
+✅ "环保包装正确打开方式" (9字)
+✅ "这款礼盒月销百万的秘密" (11字)
+
 【输出格式】(JSON):
 {{
-    "title": "你的神标题",
+    "title": "你的神标题（≤{effective_title_limit}字）",
     "content": "你的精彩正文",
     "keywords": ["tag1", "tag2"]
 }}

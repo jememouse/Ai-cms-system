@@ -33,7 +33,11 @@ class SocialManagerAgent(BaseAgent):
 
         print(f"🤖 [{self.name}] 收到任务: 为《{article_title}》制作【{p_conf['name']}】内容")
         
-        # 1. 调用通用写作技能
+        # 获取限制值
+        title_limit = p_conf.get('title_limit', 18)
+        content_limit = p_conf.get('content_limit', 900)
+        
+        # 1. 调用写作技能
         post_data = self.use_skill("social_writing", {
             "source_title": article_title, 
             "source_content": article_content,
@@ -43,23 +47,39 @@ class SocialManagerAgent(BaseAgent):
         if not post_data:
             print(f"❌ [{self.name}] 写作失败")
             return None
-            
-        # 2. 调用美工技能 (封面图)
-        # [Config Change] 用户要求不插入图片
-        cover_url = "" 
-        # cover_url = self.use_skill("cover_design", {
-        #     "title": post_data.get('title', article_title),
-        #     "keywords": post_data.get('keywords', [])
-        # })
         
-        # 3. 后处理: 格式化关键词
+        # 2. 检查标题是否超限 → AI 自压缩
+        generated_title = post_data.get('title', '')
+        if len(generated_title) > title_limit:
+            print(f"   ⚠️ [Check] 标题超限 ({len(generated_title)}>{title_limit})，启动 AI 自压缩...")
+            compressed_title = self._compress_title(generated_title, title_limit)
+            if compressed_title:
+                post_data['title'] = compressed_title
+                print(f"   ✅ [Compress] 压缩成功: {compressed_title} ({len(compressed_title)}字)")
+            
+        # 3. 调用美工技能 (封面图) - 已禁用
+        cover_url = ""
+        
+        # 4. 后处理: 格式化关键词
         raw_keywords = post_data.get('keywords', [])
         formatted_keywords = self._format_keywords(raw_keywords)
         
+        # 5. 智能截断兜底: 如果 AI 压缩仍超限，作为最后保障
+        raw_title = post_data.get('title', '')
+        raw_content = post_data.get('content', '')
+        
+        if len(raw_title) > title_limit:
+            print(f"   ⚠️ [Fallback] AI压缩后仍超限，启用智能截断")
+            raw_title = self._smart_truncate(raw_title, title_limit)
+        
+        if len(raw_content) > content_limit:
+            print(f"   ⚠️ [Truncate] 内容超限 ({len(raw_content)}>{content_limit}), 智能截断")
+            raw_content = self._smart_truncate(raw_content, content_limit)
+        
         # 4. 组装最终结果
         final_post = {
-            "title": post_data.get('title'),
-            "content": post_data.get('content'),
+            "title": raw_title,
+            "content": raw_content,
             "keywords": formatted_keywords,
             "cover_url": cover_url,
             "source_title": article_title,
@@ -82,3 +102,69 @@ class SocialManagerAgent(BaseAgent):
             if tag:
                 final_tags.append(f"#{tag}")
         return " ".join(final_tags)
+
+    def _compress_title(self, original_title: str, max_len: int) -> str:
+        """
+        AI 自压缩: 让 LLM 自己将超限标题压缩到指定长度
+        比硬截断更智能，能保持语义完整性
+        """
+        from shared import config
+        from shared.utils import call_llm
+        
+        compress_prompt = f"""你是一个标题压缩专家。请将以下标题压缩到 {max_len} 字以内，保持核心含义不变。
+
+【原标题】：{original_title}（{len(original_title)}字）
+【目标】：≤{max_len}字
+
+【要求】：
+1. 必须保留核心关键词和主题
+2. 可以删除修饰词、语气词
+3. 直接输出压缩后的标题，不要任何解释
+
+【压缩后标题】："""
+
+        try:
+            result = call_llm(
+                prompt=compress_prompt,
+                model=config.LLM_MODEL,
+                temperature=0.3  # 低温度保证稳定性
+            )
+            compressed = result.strip().strip('"').strip('【').strip('】')
+            
+            # 验证压缩结果
+            if compressed and len(compressed) <= max_len:
+                return compressed
+            else:
+                print(f"   ⚠️ [Compress] 压缩结果仍超限或为空，使用原标题")
+                return None
+        except Exception as e:
+            print(f"   ❌ [Compress] 压缩失败: {e}")
+            return None
+
+    def _smart_truncate(self, text: str, max_len: int) -> str:
+        """
+        智能截断: 
+        - 优先在句末标点（。！？…）处截断
+        - 其次在逗号、分号处截断
+        - 最后硬截断并加省略号
+        """
+        if len(text) <= max_len:
+            return text
+        
+        # 在限制范围内查找最佳截断点
+        search_region = text[:max_len]
+        
+        # 优先级1: 句末标点
+        for punct in ['。', '！', '？', '…', '!', '?']:
+            pos = search_region.rfind(punct)
+            if pos > max_len * 0.5:  # 至少保留一半内容
+                return text[:pos+1]
+        
+        # 优先级2: 逗号、分号
+        for punct in ['，', ',', '；', ';', '、']:
+            pos = search_region.rfind(punct)
+            if pos > max_len * 0.6:
+                return text[:pos] + '…'
+        
+        # 优先级3: 硬截断 + 省略号
+        return text[:max_len-1] + '…'

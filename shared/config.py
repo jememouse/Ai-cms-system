@@ -43,7 +43,7 @@ SOCIAL_PLATFORMS = {
         "name": "抖音",
         "type": "article", # User requested Article
         "sheet_name": "douyin",
-        "title_limit": 20,
+        "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 4,
         "daily_target": 15
@@ -52,7 +52,7 @@ SOCIAL_PLATFORMS = {
         "name": "微信视频",
         "type": "article", # User requested Article
         "sheet_name": "wechat_video",
-        "title_limit": 20,
+        "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 4,
         "daily_target": 12
@@ -61,7 +61,7 @@ SOCIAL_PLATFORMS = {
         "name": "小红书",
         "type": "note",
         "sheet_name": "xhs",
-        "title_limit": 20,
+        "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 4,
         "daily_target": 15
@@ -70,7 +70,7 @@ SOCIAL_PLATFORMS = {
         "name": "快手",
         "type": "article", # User requested Article
         "sheet_name": "kuaishou",
-        "title_limit": 20,
+        "title_limit": 18,
         "content_limit": 400, # 短快
         "keywords_limit": 4,
         "daily_target": 15
@@ -79,7 +79,7 @@ SOCIAL_PLATFORMS = {
         "name": "百家号",
         "type": "article",
         "sheet_name": "baijiahao",
-        "title_limit": 20,
+        "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 1, # 只要一个精准词
         "daily_target": 15
@@ -88,7 +88,7 @@ SOCIAL_PLATFORMS = {
         "name": "微博",
         "type": "microblog",
         "sheet_name": "weibo",
-        "title_limit": 20, # 微博其实没标题，这里指第一句
+        "title_limit": 18, # 微博其实没标题，这里指第一句
         "content_limit": 900,
         "keywords_limit": 4,
         "daily_target": 15
@@ -97,7 +97,7 @@ SOCIAL_PLATFORMS = {
         "name": "BILIBILI",
         "type": "article", # User requested Article
         "sheet_name": "bilibili",
-        "title_limit": 20,
+        "title_limit": 18,
         "content_limit": 900,
         "keywords_limit": 10, # B站tag多
         "daily_target": 6
