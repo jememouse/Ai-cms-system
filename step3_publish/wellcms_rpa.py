@@ -272,6 +272,63 @@ class WellCMSPublisher:
                 query = ",".join(search_terms[:2])
                 return f"https://source.unsplash.com/1024x768/?{query}"
             
+            def _get_pexels_cover(keywords: str) -> tuple:
+                """从 Pexels 获取图片 (需要 API Key，免费 200次/小时)"""
+                import requests
+                # Pexels API Key (免费申请)
+                PEXELS_API_KEY = config.PEXELS_API_KEY
+                if not PEXELS_API_KEY:
+                    return None, False
+                
+                search_query = "packaging box" if not keywords else keywords.split(",")[0].strip()
+                headers = {"Authorization": PEXELS_API_KEY}
+                
+                try:
+                    resp = requests.get(
+                        f"https://api.pexels.com/v1/search?query={search_query}&per_page=1&size=large",
+                        headers=headers,
+                        timeout=15
+                    )
+                    if resp.status_code == 200:
+                        photos = resp.json().get("photos", [])
+                        if photos:
+                            img_url = photos[0].get("src", {}).get("large", "")
+                            if img_url:
+                                # 下载图片
+                                img_resp = requests.get(img_url, timeout=20)
+                                if img_resp.status_code == 200 and len(img_resp.content) >= 10 * 1024:
+                                    return img_resp.content, True
+                except Exception as e:
+                    logger.debug(f"Pexels 获取失败: {e}")
+                return None, False
+            
+            def _get_pixabay_cover(keywords: str) -> tuple:
+                """从 Pixabay 获取图片 (需要 API Key，免费 5000次/小时)"""
+                import requests
+                # Pixabay API Key (免费申请)
+                PIXABAY_API_KEY = config.PIXABAY_API_KEY
+                if not PIXABAY_API_KEY:
+                    return None, False
+                
+                search_query = "packaging box" if not keywords else keywords.split(",")[0].strip()
+                
+                try:
+                    resp = requests.get(
+                        f"https://pixabay.com/api/?key={PIXABAY_API_KEY}&q={search_query}&image_type=photo&per_page=3",
+                        timeout=15
+                    )
+                    if resp.status_code == 200:
+                        hits = resp.json().get("hits", [])
+                        if hits:
+                            img_url = hits[0].get("largeImageURL", "")
+                            if img_url:
+                                img_resp = requests.get(img_url, timeout=20)
+                                if img_resp.status_code == 200 and len(img_resp.content) >= 10 * 1024:
+                                    return img_resp.content, True
+                except Exception as e:
+                    logger.debug(f"Pixabay 获取失败: {e}")
+                return None, False
+            
             def _generate_ai_horde_image(prompt: str, timeout: int = 60) -> tuple:
                 """
                 使用 AI Horde (开源众包) 生成 AI 图片
@@ -397,23 +454,48 @@ class WellCMSPublisher:
                     image_content = None
                     source_name = ""
                     
-                    # 方案1: 原始图片 (Pollinations.AI)
+                    # ================================================================
+                    # 🔄 Pollinations 双模式策略
+                    # ================================================================
+                    # 模式1: 匿名模式 (优先，省额度)
+                    logger.info("[Pollinations] 尝试匿名模式...")
                     image_content, is_valid = _download_image(img_url)
+                    
                     if is_valid:
-                        source_name = "Pollinations"
-                    
-                    # 方案2: AI Horde Fallback (免费 AI 生成)
-                    if not image_content:
-                        logger.info("主图片源失败，尝试 AI Horde Fallback...")
-                        # 从关键词构建简单 prompt
-                        keywords = article.get('keywords', 'packaging box')
-                        image_content, is_valid = _generate_ai_horde_image(keywords, timeout=45)
+                        source_name = "Pollinations (Anonymous)"
+                    elif "pollinations.ai" in img_url:
+                        # 模式2: 认证模式 (匿名限流时降级)
+                        logger.info("[Pollinations] 匿名模式限流，切换到认证模式...")
+                        # 添加 API Key 参数
+                        auth_url = img_url
+                        if "key=" not in auth_url:
+                            separator = "&" if "?" in auth_url else "?"
+                            auth_url = f"{auth_url}{separator}key={config.POLLINATIONS_API_KEY}"
+                        
+                        image_content, is_valid = _download_image(auth_url)
                         if is_valid:
-                            source_name = "AI Horde"
+                            source_name = "Pollinations (Authenticated)"
+                    # ================================================================
                     
-                    # 方案3: Unsplash Fallback (真实照片)
+                    # 方案2: Pexels Fallback (真实图库，永久链接)
                     if not image_content:
-                        logger.info("AI Horde 失败，尝试 Unsplash Fallback...")
+                        logger.info("Pollinations 失败，尝试 Pexels...")
+                        keywords = article.get('keywords', 'packaging box')
+                        image_content, is_valid = _get_pexels_cover(keywords)
+                        if is_valid:
+                            source_name = "Pexels"
+                    
+                    # 方案3: Pixabay Fallback (真实图库，永久链接)
+                    if not image_content:
+                        logger.info("Pexels 失败，尝试 Pixabay...")
+                        keywords = article.get('keywords', 'packaging box')
+                        image_content, is_valid = _get_pixabay_cover(keywords)
+                        if is_valid:
+                            source_name = "Pixabay"
+                    
+                    # 方案4: Unsplash Fallback (最终兜底)
+                    if not image_content:
+                        logger.info("Pixabay 失败，尝试 Unsplash...")
                         fallback_url = _get_unsplash_cover(article.get('keywords', ''))
                         image_content, is_valid = _download_image(fallback_url, timeout=15)
                         if is_valid:

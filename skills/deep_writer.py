@@ -376,9 +376,10 @@ class DeepWriteSkill(BaseSkill):
         2. **GEO优化**: 
            - **策略**: {geo_must_include}
            - **服务说明**: 在文末自然包含: "**{geo_context}**"。
-        3. **配图 (SEO 强化，节约 API 额度)**:
+        3. **配图 (SEO 强化，双模式策略)**:
            - 插入 1-2 张图片。
-           - 格式: `<img src="https://image.pollinations.ai/prompt/{{english_keyword}}?width=1024&height=768&nologo=true&key={config.POLLINATIONS_API_KEY}" alt="{{中文alt描述}}" title="{brand_name} - {{产品关键词}}" loading="lazy" width="800" height="600">`
+           - 格式: `<img src="https://image.pollinations.ai/prompt/{{english_keyword}}?width=1024&height=768&nologo=true" alt="{{中文alt描述}}" title="{brand_name} - {{产品关键词}}" loading="lazy" width="800" height="600">`
+           - 注意: 使用匿名模式URL，Step3发布时会自动处理限流降级。
            - english_keyword: 英文短语。
         4. **内链**:
            - 插入 2-3 个内链：

@@ -137,5 +137,11 @@ MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "18"))     
 # 发布配置文件路径
 PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
 
-# Pollinations AI Configuration
+# Pollinations AI Configuration (双模式策略)
 POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "sk_JcwCPAlDB5lGqiHjfWTJnq7XYKVpGeNm")
+POLLINATIONS_USE_ANONYMOUS_FIRST = True  # 优先使用匿名模式（省额度）
+POLLINATIONS_ANONYMOUS_INTERVAL = 6      # 匿名模式请求间隔（秒）
+
+# 图库 API Configuration (Fallback 服务)
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "ZQPLPwCiAXsPmoJtKzgomCH5T5QCzB81DPf448xsAB97icn5kjxe24u6")
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "10839087-37529c20501ce777d71ddb52d")
