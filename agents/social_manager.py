@@ -97,9 +97,16 @@ class SocialManagerAgent(BaseAgent):
             parts = str(raw_keywords).replace("，", ",").split(",")
         
         final_tags = []
+        
+        # [Requirement] 强制加入品牌词 "盒艺家"
+        # 即使 AI 没生成，也必须要有。放在第一个位置。
+        brand_tag = "盒艺家"
+        final_tags.append(f"#{brand_tag}")
+        
         for p in parts:
             tag = p.strip().lstrip("#")
-            if tag:
+            # 去重：如果 AI 也生成了盒艺家，不要重复添加
+            if tag and tag != brand_tag:
                 final_tags.append(f"#{tag}")
         return " ".join(final_tags)
 
