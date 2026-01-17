@@ -404,6 +404,39 @@ class WellCMSPublisher:
                 
                 return None, False
             
+            def _load_blacklist() -> set:
+                """从文件加载黑名单，支持热更新"""
+                import json
+                blacklist_file = os.path.join(PROJECT_ROOT, "config", "rate_limit_image_blacklist.json")
+                try:
+                    with open(blacklist_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        return set(data.get("blacklist", [])) | set(data.get("auto_learned", []))
+                except FileNotFoundError:
+                    logger.warning("黑名单文件不存在，使用默认值")
+                    return {"12aff62f69f5c0a5798c6f2d15dfa3c1", "694684906bafe9aec36a70ca08e8c1a7"}
+                except Exception as e:
+                    logger.error(f"加载黑名单失败: {e}，使用默认值")
+                    return {"12aff62f69f5c0a5798c6f2d15dfa3c1", "694684906bafe9aec36a70ca08e8c1a7"}
+
+            def _auto_learn_hash(hash_value: str):
+                """将新发现的限流图 MD5 自动加入黑名单"""
+                import json
+                from datetime import datetime
+                blacklist_file = os.path.join(PROJECT_ROOT, "config", "rate_limit_image_blacklist.json")
+                try:
+                    with open(blacklist_file, 'r+', encoding='utf-8') as f:
+                        data = json.load(f)
+                        if hash_value not in data.get("auto_learned", []):
+                            data.setdefault("auto_learned", []).append(hash_value)
+                            data["updated_at"] = datetime.now().isoformat()
+                            f.seek(0)
+                            json.dump(data, f, indent=2, ensure_ascii=False)
+                            f.truncate()
+                            logger.info(f"✅ 自动学习: 已添加 MD5 {hash_value} 到黑名单")
+                except Exception as e:
+                    logger.error(f"自动学习失败: {e}")
+
             def _download_image(url: str, timeout: int = 30) -> tuple:
                 """下载图片，返回 (content, is_valid)"""
                 import requests
@@ -412,28 +445,37 @@ class WellCMSPublisher:
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
                 }
                 MIN_VALID_SIZE = 10 * 1024  # 10KB
-                
-                # Pollinations.AI 速率限制图 MD5 黑名单
-                # 这些是已知的"Your prompt is fine! You've just hit the anonymous tier limit."提示图
-                RATE_LIMIT_IMAGE_HASHES = {
-                    "12aff62f69f5c0a5798c6f2d15dfa3c1",  # 1024x1360 版本 (Legacy)
-                    "694684906bafe9aec36a70ca08e8c1a7",  # 新版速率限制图 (User Reported)
-                }
+                # 基于已知限流图的精确尺寸范围
+                SUSPICIOUS_SIZE_MIN = 45000  # 45KB
+                SUSPICIOUS_SIZE_MAX = 55000  # 55KB
                 
                 for retry in range(3):
                     try:
                         resp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
                         if resp.status_code == 200 and len(resp.content) >= MIN_VALID_SIZE:
-                            # 🔍 检测是否为速率限制图
+                            # 🔍 多策略检测限流图
                             content_hash = hashlib.md5(resp.content).hexdigest()
-                            
-                            # Log hash for debugging future changes
-                            if "pollinations" in url:
-                                logger.debug(f"[Image Check] URL: {url[-20:]} | MD5: {content_hash} | Size: {len(resp.content)}")
+                            content_size = len(resp.content)
 
-                            if content_hash in RATE_LIMIT_IMAGE_HASHES:
-                                logger.warning(f"🛡️ 拦截到 Pollinations 速率限制图 (MD5: {content_hash})")
-                                return None, False
+                            if "pollinations" in url:
+                                # 策略 1: MD5 黑名单检测（最可靠）
+                                blacklist = _load_blacklist()
+                                if content_hash in blacklist:
+                                    mode = "认证模式" if "key=" in url else "匿名模式"
+                                    logger.warning(f"🛡️ 黑名单拦截 [{mode}]: MD5 {content_hash}")
+                                    return None, False
+
+                                # 策略 2: 启发式规则 - 尺寸模式检测（辅助，仅记录可疑）
+                                if SUSPICIOUS_SIZE_MIN <= content_size <= SUSPICIOUS_SIZE_MAX:
+                                    mode = "认证模式" if "key=" in url else "匿名模式"
+                                    logger.info(f"⚠️  可疑尺寸 [{mode}]: Size={content_size}B, MD5={content_hash}")
+                                    logger.info(f"   如确认为限流图，请手动添加 MD5 到黑名单")
+                                    # 不自动拦截，避免误杀正常图片
+
+                                # 调试日志（用于未来分析）
+                                mode = "认证" if "key=" in url else "匿名"
+                                logger.debug(f"[Image Check] Mode: {mode} | MD5: {content_hash} | Size: {content_size}B")
+
                             return resp.content, True
                         elif resp.status_code == 200:
                             logger.warning(f"图片太小 ({len(resp.content)} bytes)，可能是限流")
@@ -466,21 +508,23 @@ class WellCMSPublisher:
                     # 模式1: 匿名模式 (优先，省额度)
                     logger.info("[Pollinations] 尝试匿名模式...")
                     image_content, is_valid = _download_image(img_url)
-                    
+
                     if is_valid:
                         source_name = "Pollinations (Anonymous)"
                     elif "pollinations.ai" in img_url:
                         # 模式2: 认证模式 (匿名限流时降级)
-                        logger.info("[Pollinations] 匿名模式限流，切换到认证模式...")
+                        logger.info("[Pollinations] 匿名模式失败，切换到认证模式...")
                         # 添加 API Key 参数
                         auth_url = img_url
                         if "key=" not in auth_url:
                             separator = "&" if "?" in auth_url else "?"
                             auth_url = f"{auth_url}{separator}key={config.POLLINATIONS_API_KEY}"
-                        
+
                         image_content, is_valid = _download_image(auth_url)
                         if is_valid:
                             source_name = "Pollinations (Authenticated)"
+                        else:
+                            logger.warning("[Pollinations] 认证模式也失败，放弃 Pollinations")
                     # ================================================================
                     
                     # 方案2: Pexels Fallback (真实图库，永久链接)

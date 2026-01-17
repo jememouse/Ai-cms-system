@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-17T12:00:00",
+  "blacklist": [
+    "12aff62f69f5c0a5798c6f2d15dfa3c1",
+    "694684906bafe9aec36a70ca08e8c1a7",
+    "7c5a2b088e0f26b23886c70577a0deeb"
+  ],
+  "auto_learned": [],
+  "_comments": {
+    "12aff62f69f5c0a5798c6f2d15dfa3c1": "Legacy 1024x1360 rate limit image",
+    "694684906bafe9aec36a70ca08e8c1a7": "New rate limit image (user reported)",
+    "7c5a2b088e0f26b23886c70577a0deeb": "Auth mode rate limit image 52.7KB (2026-01-17)"
+  }
+}
