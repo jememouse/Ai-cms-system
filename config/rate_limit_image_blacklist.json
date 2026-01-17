@@ -4,12 +4,14 @@
   "blacklist": [
     "12aff62f69f5c0a5798c6f2d15dfa3c1",
     "694684906bafe9aec36a70ca08e8c1a7",
-    "7c5a2b088e0f26b23886c70577a0deeb"
+    "7c5a2b088e0f26b23886c70577a0deeb",
+    "a81eb186fb53a06e0fd25f92cf6479e6"
   ],
   "auto_learned": [],
   "_comments": {
     "12aff62f69f5c0a5798c6f2d15dfa3c1": "Legacy 1024x1360 rate limit image",
     "694684906bafe9aec36a70ca08e8c1a7": "New rate limit image (user reported)",
-    "7c5a2b088e0f26b23886c70577a0deeb": "Auth mode rate limit image 52.7KB (2026-01-17)"
+    "7c5a2b088e0f26b23886c70577a0deeb": "Auth mode rate limit image 52.7KB (2026-01-17)",
+    "a81eb186fb53a06e0fd25f92cf6479e6": "Anonymous mode rate limit image 49.4KB (2026-01-17)"
   }
 }
