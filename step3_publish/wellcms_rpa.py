@@ -258,7 +258,8 @@ class WellCMSPublisher:
             # -------------------------------------------------------------------
             html_content = article.get('html_content', '')
             import re
-            img_match = re.search(r'src="([^"]+)"', html_content)
+            # 改进正则：只匹配 <img ... src="..."> 避免匹配到 script 或 iframe
+            img_match = re.search(r'<img[^>]+src="([^">]+)"', html_content)
             
             # Fallback 图片源列表
             def _get_unsplash_cover(keywords: str) -> str:
@@ -490,92 +491,123 @@ class WellCMSPublisher:
                 return None, False
 
             
+            
+            # 初始化变量
+            image_content = None
+            source_name = ""
+            
+            # 1. 优先尝试从文章正文中提取图片
             if img_match:
                 img_url = img_match.group(1)
                 img_url = img_url.replace('&amp;', '&')
-                logger.info(f"发现封面图: {img_url[:50]}...")
+                logger.info(f"发现正文图片，尝试作为封面: {img_url[:50]}...")
                 
                 try:
-                    import tempfile
-                    
-                    # 尝试多源下载
-                    image_content = None
-                    source_name = ""
-                    
-                    # ================================================================
-                    # 🔄 Pollinations 双模式策略
-                    # ================================================================
-                    # 模式1: 匿名模式 (优先，省额度)
-                    logger.info("[Pollinations] 尝试匿名模式...")
+                    # 尝试下载正文图片
+                    # 注意：正文图片通常不需要 Pollinations Key，除非它本来就是 Pollinations 的链接
                     image_content, is_valid = _download_image(img_url)
+                    
+                    if is_valid:
+                        source_name = "Article Content Image"
+                    else:
+                        logger.warning(f"正文图片下载失败或无效")
+                        
+                except Exception as e:
+                    logger.warning(f"下载正文图片异常: {e}")
 
+            try:
+                import tempfile
+                
+                if not image_content:
+                    logger.info("未获取到正文图片，开始尝试 Fallback 图库...")
+
+                # ================================================================
+                # 🔄 Fallback 策略 (仅在正文无图或下载失败时执行)
+                # ================================================================
+                
+                # 方案 1: Pollinations (如果正文里没图，可能用户希望 AI 生成一张?)
+                # 逻辑调整：原代码逻辑其实是"如果正文有图链接但下载失败"也会走这里吗？
+                # 原代码逻辑非常混杂。现在的逻辑是：
+                # 1. 正文有图 -> 用正文图
+                # 2. 正文无图 -> 走 Fallback (Pollinations -> Pexels -> Pixabay -> Unsplash)
+                
+                # 如果正文图片失败，image_content 依然是 None，继续往下走
+                
+                # 方案 1: Pollinations AI 生成 (基于关键词)
+                if not image_content:
+                    # 注意：不仅仅是下载失败，如果正文根本没图，也应该走这里
+                    # 但为了生成相关图片，我们需要 prompt。使用关键词。
+                    prompt = article.get('keywords', 'packaging design')
+                    logger.info(f"[Fallback] 尝试 Pollinations 生成 (Prompt: {prompt})...")
+                    
+                    # 构造 Pollinations URL
+                    import urllib.parse
+                    encoded_prompt = urllib.parse.quote(prompt)
+                    poll_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
+                    
+                    # 模式1: 匿名模式
+                    image_content, is_valid = _download_image(poll_url)
                     if is_valid:
                         source_name = "Pollinations (Anonymous)"
-                    elif "pollinations.ai" in img_url:
-                        # 模式2: 认证模式 (匿名限流时降级)
+                    else:
+                        # 模式2: 认证模式
                         logger.info("[Pollinations] 匿名模式失败，切换到认证模式...")
-                        # 添加 API Key 参数
-                        auth_url = img_url
-                        if "key=" not in auth_url:
-                            separator = "&" if "?" in auth_url else "?"
-                            auth_url = f"{auth_url}{separator}key={config.POLLINATIONS_API_KEY}"
-
+                        auth_url = f"{poll_url}?key={config.POLLINATIONS_API_KEY}"
                         image_content, is_valid = _download_image(auth_url)
                         if is_valid:
                             source_name = "Pollinations (Authenticated)"
                         else:
-                            logger.warning("[Pollinations] 认证模式也失败，放弃 Pollinations")
-                    # ================================================================
-                    
-                    # 方案2: Pexels Fallback (真实图库，永久链接)
-                    if not image_content:
-                        logger.info("Pollinations 失败，尝试 Pexels...")
-                        keywords = article.get('keywords', 'packaging box')
-                        image_content, is_valid = _get_pexels_cover(keywords)
-                        if is_valid:
-                            source_name = "Pexels"
-                    
-                    # 方案3: Pixabay Fallback (真实图库，永久链接)
-                    if not image_content:
-                        logger.info("Pexels 失败，尝试 Pixabay...")
-                        keywords = article.get('keywords', 'packaging box')
-                        image_content, is_valid = _get_pixabay_cover(keywords)
-                        if is_valid:
-                            source_name = "Pixabay"
-                    
-                    # 方案4: Unsplash Fallback (最终兜底)
-                    if not image_content:
-                        logger.info("Pixabay 失败，尝试 Unsplash...")
-                        fallback_url = _get_unsplash_cover(article.get('keywords', ''))
-                        image_content, is_valid = _download_image(fallback_url, timeout=15)
-                        if is_valid:
-                            source_name = "Unsplash"
-                    
-                    # 上传图片
-                    if image_content:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-                            tmp.write(image_content)
-                            tmp.flush()
-                            tmp_path = tmp.name
-                            
-                            file_input = self.page.query_selector('input[data-assoc="img_1"]')
-                            if file_input:
-                                file_input.set_input_files(tmp_path)
-                                logger.info(f"封面图上传成功 [{source_name}] ({len(image_content) // 1024}KB)")
-                                time.sleep(3)
-                            else:
-                                logger.warning("未找到封面图上传框")
-                            
-                            # 清理临时文件
-                            try:
-                                os.unlink(tmp_path)
-                            except Exception as e:
-                                logger.debug(f"清理临时文件失败: {e}")
-                    else:
-                        logger.warning("所有图片源均失败，文章将无封面发布")
+                             logger.warning("[Pollinations] 生成失败")
+
+                # 方案 2: Pexels Fallback
+                if not image_content:
+                    logger.info("[Fallback] 尝试 Pexels...")
+                    keywords = article.get('keywords', 'packaging box')
+                    image_content, is_valid = _get_pexels_cover(keywords)
+                    if is_valid:
+                        source_name = "Pexels"
+                
+                # 方案 3: Pixabay Fallback
+                if not image_content:
+                    logger.info("[Fallback] 尝试 Pixabay...")
+                    keywords = article.get('keywords', 'packaging box')
+                    image_content, is_valid = _get_pixabay_cover(keywords)
+                    if is_valid:
+                        source_name = "Pixabay"
+                
+                # 方案 4: Unsplash Fallback
+                if not image_content:
+                    logger.info("[Fallback] 尝试 Unsplash...")
+                    fallback_url = _get_unsplash_cover(article.get('keywords', ''))
+                    image_content, is_valid = _download_image(fallback_url, timeout=15)
+                    if is_valid:
+                        source_name = "Unsplash"
+                
+                # 上传图片
+                if image_content:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                        tmp.write(image_content)
+                        tmp.flush()
+                        tmp_path = tmp.name
                         
-                except Exception as e:
-                    logger.error(f"封面图逻辑错误: {e}")
+                        file_input = self.page.query_selector('input[data-assoc="img_1"]')
+                        if file_input:
+                            file_input.set_input_files(tmp_path)
+                            logger.info(f"封面图上传成功 [{source_name}] ({len(image_content) // 1024}KB)")
+                            time.sleep(3)
+                        else:
+                            logger.warning("未找到封面图上传框")
+                        
+                        # 清理临时文件
+                        try:
+                            os.unlink(tmp_path)
+                        except Exception as e:
+                            logger.debug(f"清理临时文件失败: {e}")
+                else:
+                    logger.warning("所有图片源均失败，文章将无封面发布")
+                    
+            except Exception as e:
+                logger.error(f"封面图逻辑错误: {e}")
             # -------------------------------------------------------------------
             
             # 填写 SEO 字段
