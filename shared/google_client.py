@@ -111,6 +111,53 @@ class GoogleSheetClient:
                 print(f"❌ 创建工作表失败: {e}")
                 return None
 
+    def _retry_on_api_error(func):
+        """
+        装饰器：API 调用失败自动重试
+        针对 Google API 500/502/503/429 错误
+        """
+        from functools import wraps
+        
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            max_retries = 5
+            base_delay = 2
+            
+            for attempt in range(max_retries):
+                try:
+                    return func(self, *args, **kwargs)
+                except Exception as e:
+                    error_str = str(e)
+                    # 检查是否为可重试错误
+                    # gspread.exceptions.APIError: APIError: [503]: The service is currently unavailable.
+                    # APIError: [429]: Too Many Requests
+                    is_retryable = False
+                    if "500" in error_str or "502" in error_str or "503" in error_str:
+                        is_retryable = True
+                    elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                        is_retryable = True
+                    elif "104" in error_str or "Connection reset" in error_str: # Connection errors
+                        is_retryable = True
+                        
+                    if is_retryable:
+                        if attempt < max_retries - 1:
+                            sleep_time = base_delay * (2 ** attempt) # 指数退避: 2, 4, 8, 16...
+                            print(f"   ⚠️ Google API 临时错误 ({e})，将在 {sleep_time}秒 后重试 ({attempt + 1}/{max_retries})...")
+                            time.sleep(sleep_time)
+                            
+                            # 如果是 429/Auth 错误，尝试重新连接一次
+                            if "401" in error_str or "invalid_grant" in error_str:
+                                print("      🔄 尝试刷新认证...")
+                                self._connect()
+                            continue
+                    
+                    # 不可重试或重试耗尽，抛出异常
+                    print(f"❌ Google API 调用失败 (已重试 {attempt} 次): {e}")
+                    raise e
+            return None
+        return wrapper
+
+    @_retry_on_api_error
     def fetch_records_by_status(self, status: str, category: str = None, limit: int = 50) -> List[Dict]:
         """
         获取指定状态的记录
@@ -120,91 +167,83 @@ class GoogleSheetClient:
         sheet = self._get_sheet("cms")
         if not sheet: return []
         
-        try:
-            all_records = sheet.get_all_records()
-            results = []
+        # 不要在这里 try-except 掩盖错误，交给装饰器处理
+        all_records = sheet.get_all_records()
+        results = []
+        
+        for i, row in enumerate(all_records):
+            # 没有 record_id 列了，直接使用 row_index
+            row_num = i + 2
+            rec_id = f"row:{row_num}"
             
-            for i, row in enumerate(all_records):
-                # 没有 record_id 列了，直接使用 row_index
-                row_num = i + 2
-                rec_id = f"row:{row_num}"
-                
-                # 注入临时 record_id 用于更新
-                row["record_id"] = rec_id
-                
-                # 筛选逻辑
-                if str(row.get("Status")) == status:
-                    if category:
-                        if str(row.get("大项分类")) == category:
-                            results.append(row)
-                    else:
+            # 注入临时 record_id 用于更新
+            row["record_id"] = rec_id
+            
+            # 筛选逻辑
+            if str(row.get("Status")) == status:
+                if category:
+                    if str(row.get("大项分类")) == category:
                         results.append(row)
-                        
-                if len(results) >= limit:
-                    break
+                else:
+                    results.append(row)
                     
-            print(f"   📋 [GoogleSheet:cms] 获取 {len(results)} 条 {status} 记录")
-            return results
-        except Exception as e:
-            print(f"⚠️ Fetch Error: {e}")
-            return []
+            if len(results) >= limit:
+                break
+                
+        print(f"   📋 [GoogleSheet:cms] 获取 {len(results)} 条 {status} 记录")
+        return results
 
+    @_retry_on_api_error
     def update_record(self, record_id: str, fields: Dict, retry: bool = True) -> bool:
         """
         更新记录 (默认 cms 表)
-        Args:
-            record_id: 可以是 "row:5" 格式，或者是 UUID
         """
         # 简单处理：目前业务只更新 CMS 表的状态
         sheet = self._get_sheet("cms")
         if not sheet: return False
         
-        try:
-            row_num = -1
-            
-            # 策略 1: 解析 Row ID
-            if record_id.startswith("row:"):
-                try:
-                    row_num = int(record_id.split(":")[1])
-                except:
-                    pass
-            
-            # 策略 2: 如果不是 Row ID，或者是 UUID，需要扫描查找
-            if row_num == -1:
-                cell = sheet.find(record_id)
-                if cell:
-                    row_num = cell.row
-            
-            if row_num == -1:
-                print(f"❌ 未找到记录 ID: {record_id}")
-                return False
-                
-            # 执行更新
-            headers = sheet.row_values(1)
-            cells_to_update = []
-            
-            for key, value in fields.items():
-                if key in headers:
-                    col_index = headers.index(key) + 1
-                    # 格式处理
-                    if isinstance(value, (list, dict)):
-                        val_str = json.dumps(value, ensure_ascii=False)
-                    else:
-                        val_str = str(value)
-                        
-                    # 创建 Cell 对象并加入列表
-                    cells_to_update.append(gspread.Cell(row_num, col_index, val_str))
-                else:
-                    print(f"⚠️ 警告: 字段 '{key}' 不在 Sheet 表头中，已忽略")
-            
-            if cells_to_update:
-                sheet.update_cells(cells_to_update)
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ 更新失败: {e}")
+        row_num = -1
+        
+        # 策略 1: 解析 Row ID
+        if record_id.startswith("row:"):
+            try:
+                row_num = int(record_id.split(":")[1])
+            except:
+                pass
+        
+        # 策略 2: 如果不是 Row ID，或者是 UUID，需要扫描查找
+        if row_num == -1:
+            cell = sheet.find(record_id)
+            if cell:
+                row_num = cell.row
+        
+        if row_num == -1:
+            print(f"❌ 未找到记录 ID: {record_id}")
             return False
+            
+        # 执行更新
+        headers = sheet.row_values(1)
+        cells_to_update = []
+        
+        for key, value in fields.items():
+            if key in headers:
+                col_index = headers.index(key) + 1
+                # 格式处理
+                if isinstance(value, (list, dict)):
+                    val_str = json.dumps(value, ensure_ascii=False)
+                else:
+                    val_str = str(value)
+                    
+                # 创建 Cell 对象并加入列表
+                cells_to_update.append(gspread.Cell(row_num, col_index, val_str))
+            else:
+                pass
+                # print(f"⚠️ 警告: 字段 '{key}' 不在 Sheet 表头中，已忽略")
+        
+        if cells_to_update:
+            sheet.update_cells(cells_to_update)
+        
+        return True
 
     def create_record(self, fields: Dict, table_id: str = None) -> Optional[str]:
         """创建记录 (支持指定 table_id/worksheet)"""
