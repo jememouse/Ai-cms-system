@@ -92,7 +92,7 @@ def test_image_url(url: str):
 
 if __name__ == "__main__":
     # 测试用户提供的 URL
-    test_url = "https://image.pollinations.ai/prompt/small-business-unboxing-experience-kraft-paper?width=1024&height=768&nologo=true&key=pk_stu33lc2AgU55DRp"
+    test_url = "https://image.pollinations.ai/prompt/small-business-unboxing-experience-kraft-paper?width=1024&height=768&nologo=true"
 
     if len(sys.argv) > 1:
         test_url = sys.argv[1]
