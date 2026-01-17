@@ -416,7 +416,8 @@ class WellCMSPublisher:
                 # Pollinations.AI 速率限制图 MD5 黑名单
                 # 这些是已知的"Your prompt is fine! You've just hit the anonymous tier limit."提示图
                 RATE_LIMIT_IMAGE_HASHES = {
-                    "12aff62f69f5c0a5798c6f2d15dfa3c1",  # 1024x1360 版本
+                    "12aff62f69f5c0a5798c6f2d15dfa3c1",  # 1024x1360 版本 (Legacy)
+                    "694684906bafe9aec36a70ca08e8c1a7",  # 新版速率限制图 (User Reported)
                 }
                 
                 for retry in range(3):
@@ -425,8 +426,13 @@ class WellCMSPublisher:
                         if resp.status_code == 200 and len(resp.content) >= MIN_VALID_SIZE:
                             # 🔍 检测是否为速率限制图
                             content_hash = hashlib.md5(resp.content).hexdigest()
+                            
+                            # Log hash for debugging future changes
+                            if "pollinations" in url:
+                                logger.debug(f"[Image Check] URL: {url[-20:]} | MD5: {content_hash} | Size: {len(resp.content)}")
+
                             if content_hash in RATE_LIMIT_IMAGE_HASHES:
-                                logger.warning(f"检测到 Pollinations 速率限制图 (MD5: {content_hash})")
+                                logger.warning(f"🛡️ 拦截到 Pollinations 速率限制图 (MD5: {content_hash})")
                                 return None, False
                             return resp.content, True
                         elif resp.status_code == 200:
