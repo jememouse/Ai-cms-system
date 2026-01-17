@@ -1,23 +1,17 @@
 import sys
 import os
 import json
-import requests
 import random
 import logging
-import time
 from datetime import datetime
 from typing import Dict, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.skill import BaseSkill
-from shared import config
+from shared import config, llm_utils
 
 # 配置 logger
 logger = logging.getLogger(__name__)
-
-# 重试配置
-MAX_RETRIES = 2
-RETRY_DELAY = 1.0
 
 class DeepWriteSkill(BaseSkill):
     """
@@ -28,9 +22,6 @@ class DeepWriteSkill(BaseSkill):
             name="deep_write",
             description="根据标题撰写长篇 SEO/GEO 优化文章"
         )
-        self.api_key = config.LLM_API_KEY
-        self.api_url = config.LLM_API_URL
-        self.model = config.LLM_MODEL
         self._load_config()
 
     def _load_config(self):
@@ -38,122 +29,6 @@ class DeepWriteSkill(BaseSkill):
         if os.path.exists(config.CONFIG_FILE):
              with open(config.CONFIG_FILE, 'r', encoding='utf-8') as f:
                 self.brand_config = json.load(f)
-
-    def _call_llm(self, prompt: str) -> Optional[Dict]:
-        """
-        调用 LLM API，带重试机制和健壮的 JSON 解析
-        """
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        if "openrouter" in self.api_url:
-            headers["HTTP-Referer"] = "https://heyijiapack.com"
-            headers["X-Title"] = "DeepSeek CMS Agent"
-        
-        for attempt in range(MAX_RETRIES):
-            try:
-                resp = requests.post(
-                    self.api_url,
-                    headers=headers,
-                    json={
-                        "model": self.model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.7,
-                        "max_tokens": 4500,
-                        "stream": False
-                    },
-                    timeout=(30, 300)
-                )
-                
-                if resp.status_code != 200:
-                    logger.warning(f"LLM API 返回非 200 状态码: {resp.status_code}, 第 {attempt + 1} 次尝试")
-                    if attempt < MAX_RETRIES - 1:
-                        time.sleep(RETRY_DELAY)
-                    continue
-                
-                content = resp.json()["choices"][0]["message"]["content"]
-                content = content.replace("```json", "").replace("```", "").strip()
-                
-                # 增强：清洗 JSON 字符串，修复非法转义
-                content = self._sanitize_json(content)
-                
-                # 使用增强的 JSON 提取方法
-                result = self._extract_json(content)
-                if result:
-                    return result
-                    
-                logger.warning(f"JSON 解析失败, 第 {attempt + 1} 次尝试")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-                    
-            except requests.exceptions.Timeout as e:
-                logger.error(f"LLM API 超时: {e}, 第 {attempt + 1} 次尝试")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-            except Exception as e:
-                logger.error(f"LLM 调用错误: {e}", exc_info=True)
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-        
-        logger.error(f"LLM 调用失败，已达最大重试次数 ({MAX_RETRIES})")
-        return None
-    
-    def _extract_json(self, content: str) -> Optional[Dict]:
-        """
-        从 LLM 响应中提取 JSON，支持多种格式
-        """
-        import re
-        
-        # 方法1：尝试直接解析整个内容
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-        
-        # 方法2：使用正则找到最外层的 JSON 对象
-        # 匹配从第一个 { 到最后一个 } 的内容
-        json_match = re.search(r'\{[\s\S]*\}', content)
-        if json_match:
-            try:
-                return json.loads(json_match.group())
-            except json.JSONDecodeError:
-                pass
-        
-        # 方法3：遍历所有可能的 JSON 块
-        depth = 0
-        start_idx = -1
-        for i, char in enumerate(content):
-            if char == '{':
-                if depth == 0:
-                    start_idx = i
-                depth += 1
-            elif char == '}':
-                depth -= 1
-                if depth == 0 and start_idx != -1:
-                    try:
-                        return json.loads(content[start_idx:i+1])
-                    except json.JSONDecodeError:
-                        start_idx = -1
-        
-        logger.warning("无法从 LLM 响应中提取有效 JSON")
-        return None
-
-    def _sanitize_json(self, text: str) -> str:
-        """
-        清洗 JSON 字符串，修复 DeepSeek 偶尔产生的非法转义字符
-        例如: "10\20" -> "10\\20"
-        """
-        import re
-        # 1. 替换反斜杠：如果反斜杠后面不是合法的转义字符 (", \, /, b, f, n, r, t, uXXXX)，则双写它
-        # 这是一个简单的启发式规则
-        # 正则含义：匹配一个 \，其后跟的不是合法转义字符
-        # 注意：Python 字符串中写正则需要多重转义
-        
-        # 匹配反斜杠，lookahead 及其后的字符不是合法转义
-        # 合法转义: " \ / b f n r t u
-        pattern = r'\\(?![\\"/bfnrtu])'
-        
-        # 将非法的 \ 替换为 \\
-        cleaned_text = re.sub(pattern, r'\\\\', text)
-        return cleaned_text
 
     def execute(self, input_data: Dict) -> Dict:
         """
@@ -186,8 +61,8 @@ class DeepWriteSkill(BaseSkill):
             rag_context=rag_context,
             category_instruction=category_instruction
         )
-        
-        return self._call_llm(prompt)
+
+        return llm_utils.call_llm_json(prompt, temperature=0.7, max_retries=2)
 
     def _get_geo_strategy(self, category: str):
         """
