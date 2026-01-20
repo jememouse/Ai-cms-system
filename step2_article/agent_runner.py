@@ -78,7 +78,12 @@ def run():
     for idx, item in enumerate(sorted_topics):
         print(f"\n--- [{idx + 1}/{len(sorted_topics)}] {item['大项分类']} | {item['Topic'][:30]}... ---")
         
-        article = editor.write_article(item['Topic'], item['大项分类'])
+        # [Newsjacking] Try to get source trend for context injection
+        source_trend = item.get('Source_Trend', '')
+        if source_trend:
+            print(f"   🔥 [Newsjacking] 关联热点: {source_trend}")
+            
+        article = editor.write_article(item['Topic'], item['大项分类'], source_trend=source_trend)
         
         if article:
             # Update Feishu Record (Status: Ready -> Pending)

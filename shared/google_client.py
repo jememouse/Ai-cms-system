@@ -100,7 +100,7 @@ class GoogleSheetClient:
                 else:
                     # Aligned with all steps
                     headers = [
-                        "Topic", "Status", "大项分类", "Title", "HTML_Content", 
+                        "Topic", "Status", "大项分类", "Source_Trend", "Title", "HTML_Content", 
                         "摘要", "关键词", "描述", "Tags", "Schema_FAQ", "One_Line_Summary",
                         "Key_Points", "URL", "发布时间", "XHS_Status", "选题生成时间", "生成时间"
                     ]

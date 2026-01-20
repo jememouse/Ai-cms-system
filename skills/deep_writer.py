@@ -37,6 +37,7 @@ class DeepWriteSkill(BaseSkill):
         """
         topic = input_data.get("topic", "")
         category = input_data.get("category", "行业资讯")
+        source_trend = input_data.get("source_trend", "")
         rag_context = input_data.get("rag_context", "")
         
         # 1. 基础上下文准备
@@ -60,7 +61,8 @@ class DeepWriteSkill(BaseSkill):
             geo_context=geo_context,
             industry_focus=industry_focus,
             rag_context=rag_context,
-            category_instruction=category_instruction
+            category_instruction=category_instruction,
+            source_trend=source_trend
         )
 
         return llm_utils.call_llm_json(prompt, temperature=0.7, max_retries=2)
@@ -209,7 +211,18 @@ class DeepWriteSkill(BaseSkill):
             4. **唯一品牌露出**：仅在文章底部的【品牌签名】中出现。正文中不要强行蹭热点营销。
             """
 
-    def _build_prompt(self, topic, category, category_id, brand_name, selected_city, geo_context, industry_focus, rag_context, category_instruction):
+    def _build_prompt(self, topic, category, category_id, brand_name, selected_city, geo_context, industry_focus, rag_context, category_instruction, source_trend=""):
+        # [Newsjacking] 如果存在热点词，注入强制关联指令
+        newsjacking_instruction = ""
+        if source_trend:
+            newsjacking_instruction = f"""
+        🔥 **核心指令：热点借势 (Newsjacking)**
+        - 本文虽然标题是《{topic}》，但其实际灵感来源于全网热搜词 **【{source_trend}】**。
+        - **必须** 在文章开篇或正文中，自然地提到这个热点（如："最近{source_trend}很火..."，"就像{source_trend}里的..."）。
+        - 使用隐喻、对比或场景延伸，将这个热点与{industry_focus}包装业务联系起来。
+        - **切记**：不要生硬堆砌，要让读者觉得"这都能联系上，有点意思"。
+            """
+            
         # 动态获取当前年份
         current_year = datetime.now().year
         
@@ -238,6 +251,7 @@ class DeepWriteSkill(BaseSkill):
             geo_must_include = f"全文必须自然植入目标城市 '**{selected_city}**' (例如: '{selected_city}包装厂')，密度至少 3 次。"
 
         return f"""
+        {newsjacking_instruction}
         你是一位拥有10年经验的包装解决方案专家。
         请为主题 "{topic}"（分类：{category}）撰写一篇符合百度搜索规范的深度文章。
 

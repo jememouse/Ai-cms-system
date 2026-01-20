@@ -22,7 +22,7 @@ class ChiefEditorAgent(BaseAgent):
         )
         self.add_skill(DeepWriteSkill())
     
-    def write_article(self, topic: str, category: str) -> Dict:
+    def write_article(self, topic: str, category: str, source_trend: str = "") -> Dict:
         """
         [High-Level Action] 撰写一篇文章
         """
@@ -35,6 +35,7 @@ class ChiefEditorAgent(BaseAgent):
         article = self.use_skill("deep_write", {
             "topic": topic,
             "category": category,
+            "source_trend": source_trend,
             "rag_context": rag_context
         })
         

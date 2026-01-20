@@ -80,6 +80,7 @@ def run():
                             "Topic": t['Topic'],
                             "大项分类": t['大项分类'],
                             "Status": config.STATUS_READY,
+                            "Source_Trend": t.get('Source_Trend', ''),
                             "选题生成时间": t.get('created_at') or now_str # Handle empty string or missing key
                         }
                         upload_list.append(record)
