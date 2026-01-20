@@ -292,8 +292,11 @@ class DeepWriteSkill(BaseSkill):
            - 插入 2-3 个内链：
            - `<a href="{category_link['url']}">{category_link['anchor']}</a>`
            - `<a href="{cta_link['url']}">{cta_link['anchor']}</a>`
-        5. **标题**: 8-30字符。必须包含“地域名+核心关键词” (专业知识类除外，专业类标题以"干货/指南"为主)。
-        6. **Meta**: 120-160 字符。
+        5. **标题 (Title Preservation)**:
+           - **严禁改写**: 直接使用输入的 "{topic}" 作为 H1 标题。
+           - **例外**: 只有当原标题包含明显错别字时才可微调。
+           - **SEO 转移**: 将 "地域名({selected_city}) + 核心关键词" 自然融入到 **第一段开头** 或 **H2 副标题** 中，不要破坏 H1 的悬念感。
+        6. **Meta**: 120-160 字符。必须包含 "{brand_name}" 和 "{selected_city}"。
         7. **URL Slug**: SEO 友好的英文 URL (e.g. "packaging-guide-2025")。
         8. **JSON 输出**:
         
