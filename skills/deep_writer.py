@@ -45,7 +45,7 @@ class DeepWriteSkill(BaseSkill):
         brand_name = brand.get('name', '盒艺家')
         
         # 2. GEO 策略选择 (根据分类调整权重)
-        selected_city, geo_context = self._get_geo_strategy(category)
+        selected_city, geo_context, industry_focus = self._get_geo_strategy(category)
         
         # 3. 构建分类特定的指令 (传入 topic 以便识别案例词)
         category_instruction = self._get_category_instruction(category, brand_name, topic)
@@ -58,6 +58,7 @@ class DeepWriteSkill(BaseSkill):
             brand_name=brand_name,
             selected_city=selected_city,
             geo_context=geo_context,
+            industry_focus=industry_focus,
             rag_context=rag_context,
             category_instruction=category_instruction
         )
@@ -84,21 +85,51 @@ class DeepWriteSkill(BaseSkill):
             }
         }
         
+        # 细分城市产业特征 (防止内容同质化)
+        CITY_INDUSTRIES = {
+            # Core (珠三角)
+            "东莞长安": "模具/五金/电子零配件",
+            "东莞虎门": "服装/辅料/电商快消品",
+            "深圳宝安": "消费电子/智能硬件/3C数码",
+            "深圳龙岗": "跨境电商选品/眼镜/工艺品",
+            "广州白云": "美妆/个护/皮具箱包",
+            "佛山南海": "家电/家具/建材",
+            
+            # Radiation (长三角+其他)
+            "上海": "高端礼品/化妆品/品牌只有",
+            "杭州": "电商服装/丝绸/网红产品",
+            "苏州": "丝绸/工艺品/医疗器械",
+            "宁波": "小家电/文具/汽配",
+            "义乌": "小商品/玩具/饰品",
+            "青岛": "啤酒/家电/海鲜特产",
+            
+            # Growth (内地)
+            "成都": "食品/火锅底料/农特产",
+            "重庆": "汽配/食品/文创",
+            "武汉": "光电/生物医药/食品",
+            "郑州": "食品/冷链/物流包装",
+            "西安": "文创/农特产/仿古礼品",
+            "长沙": "食品/网红餐饮/茶饮"
+        }
+
         # 加权随机选择城市
         tier_weights = [("core", 0.6), ("radiation", 0.3), ("growth", 0.1)]
         selected_tier = random.choices([t[0] for t in tier_weights], weights=[t[1] for t in tier_weights])[0]
         tier_data = GEO_TIERS[selected_tier]
         selected_city = random.choice(tier_data["cities"])
         
+        # 获取该城市的产业特色 (Fallback to General)
+        industry_focus = CITY_INDUSTRIES.get(selected_city, "通用行业/电商产品")
+        
         # 差异化上下文
         if category == "专业知识":
             # 专业知识：弱化地理营销，仅作为服务范围提示
-            geo_context = f"（注：本文内容通用，但我们亦为{selected_city}及周边客户提供实地技术支持）"
+            geo_context = f"（注：本文内容通用，但我们亦为{selected_city}（{industry_focus}中心）及周边客户提供实地技术支持）"
         else:
             # 产品/资讯：强化本地化优势
             geo_context = tier_data["context"].format(city=selected_city)
             
-        return selected_city, geo_context
+        return selected_city, geo_context, industry_focus
 
     def _get_category_instruction(self, category: str, brand_name: str, topic: str = "") -> str:
         """
@@ -178,7 +209,7 @@ class DeepWriteSkill(BaseSkill):
             4. **唯一品牌露出**：仅在文章底部的【品牌签名】中出现。正文中不要强行蹭热点营销。
             """
 
-    def _build_prompt(self, topic, category, category_id, brand_name, selected_city, geo_context, rag_context, category_instruction):
+    def _build_prompt(self, topic, category, category_id, brand_name, selected_city, geo_context, industry_focus, rag_context, category_instruction):
         # 动态获取当前年份
         current_year = datetime.now().year
         
@@ -250,6 +281,7 @@ class DeepWriteSkill(BaseSkill):
              ```
         2. **GEO优化**: 
            - **策略**: {geo_must_include}
+           - **本地化产业植入**: 必须结合 **{selected_city}** 的优势产业 **{industry_focus}** 进行案例举例 (例如: 如果是深圳，就多提电子产品包装; 如果是杭州，就多提服装/丝绸包装)。不要千篇一律。
            - **服务说明**: 在文末自然包含: "**{geo_context}**"。
         3. **配图 (SEO 强化，双模式策略)**:
            - 插入 1-2 张图片。

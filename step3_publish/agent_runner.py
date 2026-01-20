@@ -44,18 +44,21 @@ def run():
     publish_config = load_publish_config()
     accounts = publish_config.get("accounts", []) if publish_config else []
     
-    # 使用第一个账号 (单账号模式)
+    # 准备账号列表 (用于轮换)
+    active_accounts = []
     if accounts:
-        first_account = accounts[0]
-        username = first_account.get("username")
-        password = first_account.get("password")
-        print(f"👤 使用账号: {username}")
+        active_accounts = accounts
+        print(f"👥 加载了 {len(active_accounts)} 个发布账号 (启用轮换模式)")
     else:
-        username = None
-        password = None
-        print("⚠️ 未找到账号配置，将使用默认值")
-    
-    agent = PublisherAgent(username=username, password=password)
+        # Fallback to defaults or single env var
+        default_user = config.WELLCMS_USERNAME
+        default_pass = config.WELLCMS_PASSWORD
+        if default_user:
+             active_accounts.append({"username": default_user, "password": default_pass})
+             print(f"👤 加载默认账号: {default_user}")
+        else:
+             print("⚠️ 未找到任何账号配置")
+
     client = GoogleSheetClient()
     
     total_success = 0
@@ -64,8 +67,14 @@ def run():
     # 1. 获取待发布文章 (Status='Pending')
     print("🔍 [System] 正在扫描待发布文章...")
     # 限制根据 Config
-    limit = config.MAX_PUBLISH_PER_CATEGORY
-    print(f"⚙️  发布上限: {limit} 篇")
+    MAX_LIMIT = config.MAX_PUBLISH_PER_CATEGORY
+    # [Randomize Limit] 模拟真人不定量发布 (1 ~ MAX)
+    if MAX_LIMIT > 1:
+        limit = random.randint(1, MAX_LIMIT)
+    else:
+        limit = 1
+        
+    print(f"⚙️  发布上限: {MAX_LIMIT} (本次随机: {limit} 篇)")
     
     pending_records = client.fetch_records_by_status(status=config.STATUS_PENDING, limit=limit)
     
@@ -147,7 +156,18 @@ def run():
             "tags": record.get('Tags')
         }
         
-        # 2. Agent 发布
+        # 2. Agent 发布 (账号轮换)
+        current_account = {}
+        if active_accounts:
+            current_account = random.choice(active_accounts)
+            
+        cur_user = current_account.get("username")
+        cur_pass = current_account.get("password")
+        
+        print(f"   👤 [Account] 本次使用账号: {cur_user}")
+        
+        # 实例化 Agent (每次独立实例化以确保 Session 隔离)
+        agent = PublisherAgent(username=cur_user, password=cur_pass)
         published_url = agent.publish_article(article_data)
         
         if published_url:
