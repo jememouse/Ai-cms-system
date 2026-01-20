@@ -34,14 +34,25 @@ class TopicAnalysisSkill(BaseSkill):
         analyzed_trends = self._analyze_trends(trends)
         
         results = []
+        generated_texts = [] # 用于去重检查
+
         # 2. 第二步：为每个热点生成标题
         for idx, trend in enumerate(analyzed_trends):
             print(f"   🧠 [Analyst] 生成标题 ({idx+1}/{len(analyzed_trends)}): {trend['topic']}")
             titles = self._generate_titles(trend, input_data.get("config", {}))
             
             for t in titles:
+                raw_title = t['title'].strip()
+                
+                # [Deduplication] 查重
+                if self._is_text_similar(raw_title, generated_texts):
+                    print(f"   🗑️ [Dedupe] 丢弃高相似度标题: {raw_title}")
+                    continue
+                
+                generated_texts.append(raw_title)
+                
                 results.append({
-                    "Topic": t['title'],
+                    "Topic": raw_title,
                     "大项分类": self._clean_category(t['category']),
                     "Status": "Pending",
                     "Source_Trend": trend['topic'],
@@ -49,6 +60,28 @@ class TopicAnalysisSkill(BaseSkill):
                 })
         
         return results
+
+    def _is_text_similar(self, new_text: str, existing_texts: List[str], threshold: float = 0.6) -> bool:
+        """
+        简单的文本相似度去重 (Jaccard Similarity on chars)
+        """
+        if not existing_texts: return False
+        
+        s1 = set(new_text)
+        for t in existing_texts:
+            s2 = set(t)
+            intersection = len(s1.intersection(s2))
+            union = len(s1.union(s2))
+            if union == 0: continue
+            
+            sim = intersection / union
+            # 如果前 5 个字完全一样，也视为重复
+            if new_text[:5] == t[:5]:
+                return True
+                
+            if sim > threshold:
+                return True
+        return False
 
     def _analyze_trends(self, trends):
         import re
@@ -132,13 +165,16 @@ class TopicAnalysisSkill(BaseSkill):
 
         任务：生成 6 个高点击率 Title。
         要求：
-        1. **多样化句式（拒绝公式化）**：
-           - **严禁使用**："案例复盘："、"故事："、"1个起订，"、"2026年"（除非必要）这种死板前缀。
-           - **拒绝排比**：6个标题的句式必须完全不同。有的用疑问句，有的用感叹句，有的用陈述句。
+        1. **多样化句式（拒绝公式化 - 严厉执行）**：
+           - **绝对违禁词** (出现即判定为劣质)：
+             - 严禁使用 "高级感(礼盒)的秘密"、"还在为...发愁"、"告别(买家秀)"
+             - 严禁使用 "XX的正确打开方式"、"一文看懂"、"一站式平台"
+             - 严禁使用 "案例复盘："、"故事："、"1个起订，"、"2026年"（除非必要）
+           - **拒绝排比**：6个标题的句式和前半句必须完全不同。
         2. **高点击率风格（Human-written）**：
            - **悬念型**："袜子销量翻倍？没想到仅仅是换了这个包装..."
-           - **直击痛点**："小批量定制太贵？那是你没找对源头厂"
-           - **数据说话**："客单价提升30%的秘密：高级感礼盒设计"
+           - **直击痛点**："小批量定制太贵？源头厂长说了真话"
+           - **数据说话**："客单价提升30%的秘密：揭秘大牌礼盒设计逻辑"
            - **避坑指南**："劝退！这3种包装材质千万别踩雷"
         3. **字数控制**：30个字符以内（允许更完整的长标题）。
         4. **内容分布**：
