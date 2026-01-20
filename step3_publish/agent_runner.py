@@ -1,3 +1,4 @@
+import random
 import sys
 import os
 import time
@@ -80,7 +81,6 @@ def run():
     
     print(f"📋 发现 {len(pending_records)} 篇待发布文章")
     
-    import random
     
     for idx, record in enumerate(pending_records):
         print(f"\n--- [{idx + 1}/{len(pending_records)}] 发布: {record.get('Title', '')[:30]}... ---")
