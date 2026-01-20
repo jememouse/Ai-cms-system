@@ -2,8 +2,8 @@ name: Step3 - RPA 发布到 WellCMS
 
 on:
   schedule:
-    # 北京时间 08:00 - 21:00 每小时执行 -> UTC 00:00 - 13:00
-    - cron: '0 0-13 * * *'
+    # 北京时间 08:00 - 22:00 每30分钟执行 -> UTC 00:00 - 14:00
+    - cron: '*/30 0-14 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:

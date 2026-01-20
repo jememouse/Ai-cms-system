@@ -68,14 +68,12 @@ def run():
     # 1. 获取待发布文章 (Status='Pending')
     print("🔍 [System] 正在扫描待发布文章...")
     # 限制根据 Config
-    MAX_LIMIT = config.MAX_PUBLISH_PER_CATEGORY
-    # [Randomize Limit] 模拟真人不定量发布 (1 ~ MAX)
-    if MAX_LIMIT > 1:
-        limit = random.randint(1, MAX_LIMIT)
-    else:
-        limit = 1
+    # [Safe Drip Strategy]
+    # 30分钟一次，每次随机发 1 或 2 篇
+    # 模拟真人这种"想起来就发一篇"的行为
+    limit = random.randint(1, 2)
         
-    print(f"⚙️  发布上限: {MAX_LIMIT} (本次随机: {limit} 篇)")
+    print(f"⚙️  [Drip Mode] 本次随机发布: {limit} 篇")
     
     pending_records = client.fetch_records_by_status(status=config.STATUS_PENDING, limit=limit)
     
