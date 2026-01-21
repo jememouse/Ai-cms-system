@@ -68,12 +68,15 @@ def run():
     # 1. 获取待发布文章 (Status='Pending')
     print("🔍 [System] 正在扫描待发布文章...")
     # 限制根据 Config
-    # [Safe Drip Strategy]
-    # 30分钟一次，每次随机发 1 或 2 篇
-    # 模拟真人这种"想起来就发一篇"的行为
-    limit = random.randint(1, 2)
+    # [Multi-Account Concurrency Strategy]
+    # 每个账号每半小时发布 2-3 篇
+    # 总发布量 = 账号数量 * random(2, 3)
+    
+    num_accounts = len(active_accounts) if active_accounts else 1
+    per_account_limit = random.randint(2, 3)
+    limit = num_accounts * per_account_limit
         
-    print(f"⚙️  [Drip Mode] 本次随机发布: {limit} 篇")
+    print(f"⚙️  [Boost Mode] 账号数: {num_accounts} | 单号配额: {per_account_limit} | 本次计划发布: {limit} 篇")
     
     pending_records = client.fetch_records_by_status(status=config.STATUS_PENDING, limit=limit)
     
@@ -154,15 +157,19 @@ def run():
             "tags": record.get('Tags')
         }
         
-        # 2. Agent 发布 (账号轮换)
+        # 2. Agent 发布 (账号轮换 & 负载均衡)
         current_account = {}
         if active_accounts:
-            current_account = random.choice(active_accounts)
+            # Round-Robin 轮询分配
+            current_account = active_accounts[idx % len(active_accounts)]
+        else:
+            # Fallback (理论上不会走到这，前面有检查)
+            current_account = {"username": config.WELLCMS_USERNAME, "password": config.WELLCMS_PASSWORD}
             
         cur_user = current_account.get("username")
         cur_pass = current_account.get("password")
         
-        print(f"   👤 [Account] 本次使用账号: {cur_user}")
+        print(f"   👤 [Account] 本次使用账号 ({idx + 1}): {cur_user}")
         
         # 实例化 Agent (每次独立实例化以确保 Session 隔离)
         agent = PublisherAgent(username=cur_user, password=cur_pass)
