@@ -174,33 +174,41 @@ def run():
         
         print(f"   👤 [Account] 本次使用账号 ({idx + 1}): {cur_user}")
         
-        # 实例化 Agent (每次独立实例化以确保 Session 隔离)
-        agent = PublisherAgent(username=cur_user, password=cur_pass)
-        published_url = agent.publish_article(article_data)
-        
-        if published_url:
-            # 3. System Update Feishu
-            client.update_record(record['record_id'], {
-                "Status": config.STATUS_PUBLISHED,
-                "URL": published_url,
-                "发布时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-            print(f"   💾 [System] 飞书状态已更新为 Published")
+        try:
+            # 实例化 Agent (每次独立实例化以确保 Session 隔离)
+            agent = PublisherAgent(username=cur_user, password=cur_pass)
+            published_url = agent.publish_article(article_data)
             
-            # 4. Asset Write-back (SEO Closed Loop)
-            _record_to_assets(article_data, published_url)
-            
-            total_success += 1
-            stats.record_published()
-        else:
+            if published_url:
+                # 3. System Update Feishu
+                client.update_record(record['record_id'], {
+                    "Status": config.STATUS_PUBLISHED,
+                    "URL": published_url,
+                    "发布时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
+                print(f"   💾 [System] 飞书状态已更新为 Published")
+                
+                # 4. Asset Write-back (SEO Closed Loop)
+                _record_to_assets(article_data, published_url)
+                
+                total_success += 1
+                stats.record_published()
+            else:
+                total_fail += 1
+                stats.record_failed()
+                print(f"   ❌ [Failed] 发布失败，未返回 URL")
+        except Exception as e:
             total_fail += 1
             stats.record_failed()
+            print(f"   ❌ [Error] 发布过程中发生异常: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Random Interval
         if idx < len(pending_records) - 1:
             # Optimization: speed up for testing (5-15s)
             wait_time = random.uniform(3, 8)
-            print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
+        print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
             time.sleep(wait_time)
 
     # 发送飞书通知
@@ -211,6 +219,13 @@ def run():
             content=notify_content
         )
         print(f"📢 已发送飞书通知 (成功: {total_success}, 失败: {total_fail})")
+    else:
+        # Debug Mode: Notify even if empty to confirm scheduling
+        print(f"⚠️ 本次未找到待发布文章 (Status=Pending)")
+        client.send_notification(
+            title="⚠️ CMS 发布轮空",
+            content=f"本次运行未找到 'Pending' 状态的文章。\n⏰ 时间: {time.strftime('%Y-%m-%d %H:%M')}\n请检查 Step 1/2 是否生成了足够内容。"
+        )
 
 def _record_to_assets(article, url):
     """
