@@ -68,15 +68,18 @@ def run():
     # 1. 获取待发布文章 (Status='Pending')
     print("🔍 [System] 正在扫描待发布文章...")
     # 限制根据 Config
-    # [Multi-Account Concurrency Strategy]
-    # 每个账号每半小时发布 2-3 篇
-    # 总发布量 = 账号数量 * random(2, 3)
+    # 1. 获取待发布文章 (Status='Pending')
+    print("🔍 [System] 正在扫描待发布文章...")
+    # 限制根据 Config
+    # [Target Capacity Strategy]
+    # 用户指定: 每半小时 9 篇
+    # Total = 9 (Round-robin 分配给 5 个账号 -> 也就是每号发 1-2 篇)
     
+    limit = 9
+    
+    # 还是打印一下账号信息只是为了调试
     num_accounts = len(active_accounts) if active_accounts else 1
-    per_account_limit = random.randint(2, 3)
-    limit = num_accounts * per_account_limit
-        
-    print(f"⚙️  [Boost Mode] 账号数: {num_accounts} | 单号配额: {per_account_limit} | 本次计划发布: {limit} 篇")
+    print(f"⚙️  [Target Mode] 账号数: {num_accounts} | 本次锁定发布: {limit} 篇")
     
     pending_records = client.fetch_records_by_status(status=config.STATUS_PENDING, limit=limit)
     
