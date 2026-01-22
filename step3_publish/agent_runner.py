@@ -75,7 +75,7 @@ def run():
     # 用户指定: 每半小时 9 篇
     # Total = 9 (Round-robin 分配给 5 个账号 -> 也就是每号发 1-2 篇)
     
-    limit = 9
+    limit = 12
     
     # 还是打印一下账号信息只是为了调试
     num_accounts = len(active_accounts) if active_accounts else 1
