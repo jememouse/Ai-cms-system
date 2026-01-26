@@ -90,12 +90,15 @@ class TopicAnalysisSkill(BaseSkill):
         # 动态选择城市 (GEO 策略)
         GEO_CITIES = ["东莞", "深圳", "广州", "上海", "杭州", "苏州", "义乌", "佛山"]
         selected_city = random.choice(GEO_CITIES)
+        
+        trend_settings = input_data.get("config", {}).get("trend_settings", {})
+        target_count = trend_settings.get("max_trends_to_analyze", 5)
 
         prompt = f"""
         我们是一家 **"包装在线定制电商平台（强大的供应链及品质管理+交付系统）"** （盒艺家）。
         你是一位拥有10年经验的包装解决方案专家，代表 **盒艺家（包装在线定制平台 + 强大的供应链及品质管理+交付系统）**。擅长同时服务 **B2B企业采购** 和 **B2C/C2M个人定制**。即使是通用话题，也要基于 **{selected_city}** 的地域视角进行解答。
 
-        请从以下全网热点中，**务必挑选出 20 个** 最适合写文章的话题。
+        请从以下全网热点中，**务必挑选出 {target_count} 个** 最适合写文章的话题。
 
         筛选优先级（兼顾 B2B 与 B2C）：
         1. **S级（必选 - 借势营销/高意图）**：
@@ -120,8 +123,10 @@ class TopicAnalysisSkill(BaseSkill):
         res = llm_utils.call_llm_json_array(prompt, temperature=0.7, max_retries=2)
         analyzed_trends = res if res else []
         
-        # === Fallback: 确保数量达标 (20个) ===
-        target_count = 20
+        # === Fallback: 确保数量达标 ===
+        trend_settings = input_data.get("config", {}).get("trend_settings", {})
+        target_count = trend_settings.get("max_trends_to_analyze", 5)
+        
         if len(analyzed_trends) < target_count:
             print(f"⚠️ [Topics] LLM仅返回 {len(analyzed_trends)} 个 (目标{target_count})，启动自动补全...")
             
@@ -154,6 +159,10 @@ class TopicAnalysisSkill(BaseSkill):
         brand_name = brand_config.get('brand', {}).get('name', '盒艺家')
         topic = trend.get('topic', '')
         angle = trend.get('angle', '')
+        
+        # Get counts from config
+        trend_settings = brand_config.get('trend_settings', {})
+        count = trend_settings.get('titles_per_trend', 3)
 
         # 动态获取当前年份
         current_year = datetime.now().year
@@ -163,38 +172,32 @@ class TopicAnalysisSkill(BaseSkill):
         热点：{topic} (角度: {angle})
         当前年份：{current_year}年
 
-        任务：生成 6 个高点击率 Title。
+        任务：生成 {count} 个高点击率 Title。
         要求：
         1. **多样化句式（拒绝公式化 - 严厉执行）**：
            - **绝对违禁词** (出现即判定为劣质)：
              - 严禁使用 "高级感(礼盒)的秘密"、"还在为...发愁"、"告别(买家秀)"
              - 严禁使用 "XX的正确打开方式"、"一文看懂"、"一站式平台"
              - 严禁使用 "案例复盘："、"故事："、"1个起订，"、"2026年"（除非必要）
-           - **拒绝排比**：6个标题的句式和前半句必须完全不同。
+           - **拒绝排比**：{count}个标题的句式和前半句必须完全不同。
         2. **高点击率风格（Human-written）**：
            - **悬念型**："袜子销量翻倍？没想到仅仅是换了这个包装..."
            - **直击痛点**："小批量定制太贵？源头厂长说了真话"
            - **数据说话**："客单价提升30%的秘密：揭秘大牌礼盒设计逻辑"
            - **避坑指南**："劝退！这3种包装材质千万别踩雷"
         3. **字数控制**：30个字符以内（允许更完整的长标题）。
-        4. **内容分布**：
-           - 2个 **专业知识** (干货/避坑/材质)
-           - 2个 **行业资讯** (趋势/数据/展会)
-           - 2个 **产品介绍** (场景/痛点/选购)
+        4. **内容分布** ({count}个总数)：
+           - 确保覆盖 **专业知识**、**行业资讯**、**产品介绍** 中至少两个分类。
            **注意**：不要返回独立的"客户案例"分类，归入以上三类。
 
         返回 JSON:
         [
             {{"title": "标题1", "category": "专业知识"}},
-            {{"title": "标题2", "category": "专业知识"}},
-            {{"title": "标题3", "category": "行业资讯"}},
-            {{"title": "标题4", "category": "行业资讯"}},
-            {{"title": "标题5", "category": "产品介绍"}},
-            {{"title": "标题6", "category": "产品介绍"}}
+            ... (共{count}个)
         ]
         """
         res = llm_utils.call_llm_json_array(prompt, temperature=0.7, max_retries=2)
-        return res if res else []
+        return res[:count] if res else []
 
     def _clean_category(self, cat):
         valid_cats = ["专业知识", "行业资讯", "产品介绍"]

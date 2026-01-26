@@ -304,6 +304,10 @@
       "当天发货"
     ]
   },
+  "trend_settings": {
+    "max_trends_to_analyze": 20,
+    "titles_per_trend": 3
+  },
   "deepseek_prompt": {
     "trend_analysis": "你是一个包装行业专家。请分析以下百度热搜话题，判断哪些话题可以蹭热点来撰写关于'包装印刷、礼盒定制、品牌包装'的文章。如果话题无关，请忽略。请返回JSON格式。",
     "title_generation": "请结合热点话题 '{trend}' 和我们的核心关键词，生成 5 个吸引人的 SEO 标题。分类为：专业知识、行业资讯、或产品介绍。"
