@@ -138,16 +138,14 @@ MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "2"))      
 PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
 
 # Pollinations AI Configuration (多 Key 负载均衡)
-POLLINATIONS_API_KEYS = [
-    "sk_JcwCPAlDB5lGqiHjfWTJnq7XYKVpGeNm",
-    "sk_B0meLLn5xXeJ3FDQD6BZmmExEVkCHdBp",
-    "sk_NHBEtLaLR6bugmpluj2J4BGqVxBuCSGI",
-]
+# 从环境变量读取，逗号分隔多个 Key
+_pollinations_keys_str = os.getenv("POLLINATIONS_API_KEYS", "")
+POLLINATIONS_API_KEYS = [k.strip() for k in _pollinations_keys_str.split(",") if k.strip()]
 # 兼容旧代码：取第一个 Key
 POLLINATIONS_API_KEY = POLLINATIONS_API_KEYS[0] if POLLINATIONS_API_KEYS else ""
 POLLINATIONS_USE_ANONYMOUS_FIRST = True  # 优先使用匿名模式（省额度）
 POLLINATIONS_ANONYMOUS_INTERVAL = 6      # 匿名模式请求间隔（秒）
 
 # 图库 API Configuration (Fallback 服务)
-PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "ZQPLPwCiAXsPmoJtKzgomCH5T5QCzB81DPf448xsAB97icn5kjxe24u6")
-PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "10839087-37529c20501ce777d71ddb52d")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "")

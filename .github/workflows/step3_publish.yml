@@ -38,6 +38,10 @@ jobs:
         # Google Sheets Config
         GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        # Image API Keys
+        POLLINATIONS_API_KEYS: ${{ secrets.POLLINATIONS_API_KEYS }}
+        PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
         TZ: 'Asia/Shanghai'
       run: |
         uv run python -m step3_publish.agent_runner
