@@ -206,8 +206,8 @@ def run():
         
         # Random Interval
         if idx < len(pending_records) - 1:
-            # Optimization: speed up for testing (5-15s)
-            wait_time = random.uniform(3, 8)
+            # Optimized: faster interval (1-3s)
+            wait_time = random.uniform(1, 3)
             print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
             time.sleep(wait_time)
 
