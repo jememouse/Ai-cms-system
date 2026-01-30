@@ -258,8 +258,18 @@ class WellCMSPublisher:
             # -------------------------------------------------------------------
             html_content = article.get('html_content', '')
             import re
+            import random as rand_module
             # 改进正则：只匹配 <img ... src="..."> 避免匹配到 script 或 iframe
             img_match = re.search(r'<img[^>]+src="([^">]+)"', html_content)
+            
+            def _get_random_pollinations_key() -> str:
+                """随机选择一个 Pollinations API Key (负载均衡)"""
+                keys = getattr(config, 'POLLINATIONS_API_KEYS', [])
+                if keys:
+                    selected = rand_module.choice(keys)
+                    logger.debug(f"🔄 选择 Pollinations Key: {selected[:8]}...")
+                    return selected
+                return config.POLLINATIONS_API_KEY  # 兼容旧配置
             
             # Fallback 图片源列表
             def _get_unsplash_cover(keywords: str) -> str:
@@ -450,9 +460,17 @@ class WellCMSPublisher:
                 SUSPICIOUS_SIZE_MIN = 45000  # 45KB
                 SUSPICIOUS_SIZE_MAX = 55000  # 55KB
                 
+                # 🚀 Pollinations AI 生成图片需要更长超时
+                is_ai_gen = "pollinations" in url.lower()
+                effective_timeout = 45 if is_ai_gen else timeout
+                if is_ai_gen:
+                    logger.info(f"📥 [AI图片] 开始下载: {url[:80]}... (超时: {effective_timeout}s)")
+                else:
+                    logger.info(f"📥 开始下载图片: {url[:80]}...")
+                
                 for retry in range(3):
                     try:
-                        resp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+                        resp = requests.get(url, headers=headers, timeout=effective_timeout, allow_redirects=True)
                         if resp.status_code == 200 and len(resp.content) >= MIN_VALID_SIZE:
                             # 🔍 多策略检测限流图
                             content_hash = hashlib.md5(resp.content).hexdigest()
@@ -477,16 +495,19 @@ class WellCMSPublisher:
                                 mode = "认证" if "key=" in url else "匿名"
                                 logger.debug(f"[Image Check] Mode: {mode} | MD5: {content_hash} | Size: {content_size}B")
 
+                            logger.info(f"✅ 图片下载成功: {content_size//1024}KB, MD5={content_hash[:8]}...")
                             return resp.content, True
                         elif resp.status_code == 200:
-                            logger.warning(f"图片太小 ({len(resp.content)} bytes)，可能是限流")
+                            logger.warning(f"❌ 图片太小 ({len(resp.content)} bytes)，可能是限流图")
                             return None, False
                     except requests.exceptions.Timeout:
                         if retry < 2:
-                            logger.debug(f"下载超时，重试 {retry + 1}/3...")
-                            time.sleep(2)
+                            logger.warning(f"⏳ 下载超时，重试 {retry + 1}/3... (timeout={effective_timeout}s)")
+                            time.sleep(3)  # 增加重试间隔
+                        else:
+                            logger.error(f"❌ 下载超时 (已重试3次, timeout={effective_timeout}s)")
                     except Exception as e:
-                        logger.debug(f"下载异常: {e}")
+                        logger.warning(f"❌ 下载异常: {e}")
                         break
                 return None, False
 
@@ -500,20 +521,29 @@ class WellCMSPublisher:
             if img_match:
                 img_url = img_match.group(1)
                 img_url = img_url.replace('&amp;', '&')
-                logger.info(f"发现正文图片，尝试作为封面: {img_url[:50]}...")
+                logger.info(f"🖼️ 发现正文图片，尝试作为封面: {img_url[:80]}...")
                 
                 try:
                     # 尝试下载正文图片
-                    # 注意：正文图片通常不需要 Pollinations Key，除非它本来就是 Pollinations 的链接
                     image_content, is_valid = _download_image(img_url)
                     
                     if is_valid:
                         source_name = "Article Content Image"
                     else:
-                        logger.warning(f"正文图片下载失败或无效")
+                        logger.warning(f"⚠️ 正文图片下载失败或无效")
+                        
+                        # 🔄 Fallback: 如果是 Pollinations 匿名模式失败，立即尝试认证模式
+                        if "pollinations" in img_url.lower() and "key=" not in img_url:
+                            logger.info(f"🔄 [Fallback] Pollinations 匿名模式失败，尝试认证模式...")
+                            # 添加 API Key
+                            auth_url = img_url + ("&" if "?" in img_url else "?") + f"key={_get_random_pollinations_key()}"
+                            image_content, is_valid = _download_image(auth_url)
+                            if is_valid:
+                                source_name = "Pollinations (Auth Fallback)"
+                                logger.info(f"✅ Pollinations 认证模式成功")
                         
                 except Exception as e:
-                    logger.warning(f"下载正文图片异常: {e}")
+                    logger.warning(f"❌ 下载正文图片异常: {e}")
 
             try:
                 import tempfile
@@ -552,7 +582,7 @@ class WellCMSPublisher:
                     else:
                         # 模式2: 认证模式
                         logger.info("[Pollinations] 匿名模式失败，切换到认证模式...")
-                        auth_url = f"{poll_url}?key={config.POLLINATIONS_API_KEY}"
+                        auth_url = f"{poll_url}?key={_get_random_pollinations_key()}"
                         image_content, is_valid = _download_image(auth_url)
                         if is_valid:
                             source_name = "Pollinations (Authenticated)"

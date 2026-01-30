@@ -137,8 +137,13 @@ MAX_PUBLISH_PER_CATEGORY = int(os.getenv("MAX_PUBLISH_PER_CATEGORY", "2"))      
 # 发布配置文件路径
 PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
 
-# Pollinations AI Configuration (双模式策略)
-POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "sk_JcwCPAlDB5lGqiHjfWTJnq7XYKVpGeNm")
+# Pollinations AI Configuration (多 Key 负载均衡)
+POLLINATIONS_API_KEYS = [
+    "sk_JcwCPAlDB5lGqiHjfWTJnq7XYKVpGeNm",
+    "sk_B0meLLn5xXeJ3FDQD6BZmmExEVkCHdBp",
+]
+# 兼容旧代码：取第一个 Key
+POLLINATIONS_API_KEY = POLLINATIONS_API_KEYS[0] if POLLINATIONS_API_KEYS else ""
 POLLINATIONS_USE_ANONYMOUS_FIRST = True  # 优先使用匿名模式（省额度）
 POLLINATIONS_ANONYMOUS_INTERVAL = 6      # 匿名模式请求间隔（秒）
 
