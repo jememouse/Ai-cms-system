@@ -31,7 +31,7 @@ class TopicAnalysisSkill(BaseSkill):
         if not trends: return []
 
         # 1. 第一步：筛选 20 个热点
-        analyzed_trends = self._analyze_trends(trends)
+        analyzed_trends = self._analyze_trends(trends, input_data)
         
         results = []
         generated_texts = [] # 用于去重检查
@@ -83,7 +83,7 @@ class TopicAnalysisSkill(BaseSkill):
                 return True
         return False
 
-    def _analyze_trends(self, trends):
+    def _analyze_trends(self, trends, input_data: Dict):
         import re
         trends_str = "\n".join([f"- {t}" for t in trends])
 
