@@ -8,7 +8,9 @@ import os
 import time
 import logging
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 项目根目录
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 from typing import Dict, Tuple, Optional
 from playwright.sync_api import sync_playwright, Page, Browser
