@@ -141,6 +141,7 @@ PUBLISH_CONFIG_FILE = os.path.join(PROJECT_ROOT, "publish_config.json")
 POLLINATIONS_API_KEYS = [
     "sk_JcwCPAlDB5lGqiHjfWTJnq7XYKVpGeNm",
     "sk_B0meLLn5xXeJ3FDQD6BZmmExEVkCHdBp",
+    "sk_NHBEtLaLR6bugmpluj2J4BGqVxBuCSGI",
 ]
 # 兼容旧代码：取第一个 Key
 POLLINATIONS_API_KEY = POLLINATIONS_API_KEYS[0] if POLLINATIONS_API_KEYS else ""
