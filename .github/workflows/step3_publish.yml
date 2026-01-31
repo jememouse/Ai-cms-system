@@ -9,6 +9,10 @@ on:
 jobs:
   step3-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 25          # 25分钟超时（留5分钟buffer）
+    concurrency:
+      group: step3-publish
+      cancel-in-progress: false  # 跳过新任务，不取消正在运行的
     
     steps:
     - name: Checkout code

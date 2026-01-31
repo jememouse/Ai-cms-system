@@ -72,10 +72,10 @@ def run():
     print("🔍 [System] 正在扫描待发布文章...")
     # 限制根据 Config
     # [Target Capacity Strategy]
-    # 用户指定: 每半小时 9 篇
-    # Total = 9 (Round-robin 分配给 5 个账号 -> 也就是每号发 1-2 篇)
+    # 用户指定: 每半小时 21 篇
+    # Total = 21 (Round-robin 分配给多个账号)
     
-    limit = 12
+    limit = 21
     
     # 还是打印一下账号信息只是为了调试
     num_accounts = len(active_accounts) if active_accounts else 1
@@ -206,8 +206,8 @@ def run():
         
         # Random Interval
         if idx < len(pending_records) - 1:
-            # Optimized: faster interval (1-3s)
-            wait_time = random.uniform(1, 3)
+            # Optimized: faster interval (0.5-1.5s)
+            wait_time = random.uniform(0.5, 1.5)
             print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
             time.sleep(wait_time)
 

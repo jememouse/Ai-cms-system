@@ -100,7 +100,7 @@ class WellCMSPublisher:
         for attempt in range(retries + 1):
             try:
                 self.page.goto(url, wait_until=wait_until, timeout=timeout)
-                time.sleep(2)  # 等待页面稳定
+                time.sleep(1)  # 等待页面稳定 (优化)
                 return True
             except Exception as e:
                 error_msg = str(e)
@@ -200,7 +200,7 @@ class WellCMSPublisher:
                  
             if "admin" in current_url and "login" not in current_url:
                 print("      ✅ [Result] 登录成功")
-                time.sleep(3)  # 等待 session 完全建立
+                time.sleep(2)  # 等待 session 完全建立 (优化)
                 return True
             else:
                 print(f"      ❌ [Result] 登录失败 ({current_url})")
@@ -214,10 +214,10 @@ class WellCMSPublisher:
         """发布文章"""
         try:
             # 导航到发布页面 (增加等待确保后台登录 session 稳定)
-            time.sleep(2)
+            time.sleep(1)  # (优化)
             if not self._safe_goto(self.post_url):
                 return False, ""
-            time.sleep(2)  # 等待页面完全加载
+            time.sleep(1)  # 等待页面完全加载 (优化)
             
             # 填写标题
             # 填写标题
@@ -253,7 +253,7 @@ class WellCMSPublisher:
             except Exception:
                 print(f"      ⚠️ 选择分类失败 (ID: {category_id})")
             
-            time.sleep(1)
+            time.sleep(0.5)  # (优化)
             
             # -------------------------------------------------------------------
             # 🖼️ 封面图处理 (多源 Fallback 机制)
@@ -626,7 +626,7 @@ class WellCMSPublisher:
                         if file_input:
                             file_input.set_input_files(tmp_path)
                             logger.info(f"封面图上传成功 [{source_name}] ({len(image_content) // 1024}KB)")
-                            time.sleep(3)
+                            time.sleep(2)  # (优化)
                         else:
                             logger.warning("未找到封面图上传框")
                         
@@ -792,7 +792,7 @@ class WellCMSPublisher:
             # 4. 拼接前台 URL
             
             print("      🔍 正在解析文章真实 URL...")
-            time.sleep(2) # 等待列表页加载
+            time.sleep(1) # 等待列表页加载 (优化)
             
             # 确保在列表页 (content-list)
             # 无论之前是在哪，强制去一次内容管理页，确保能找到刚发的文章
