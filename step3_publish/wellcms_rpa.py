@@ -519,33 +519,27 @@ class WellCMSPublisher:
             image_content = None
             source_name = ""
             
-            # 1. 优先尝试从文章正文中提取图片
+            # 1. 优先尝试从文章正文中提取图片（跳过 Pollinations，因为生成太慢）
             if img_match:
                 img_url = img_match.group(1)
                 img_url = img_url.replace('&amp;', '&')
-                logger.info(f"🖼️ 发现正文图片，尝试作为封面: {img_url[:80]}...")
                 
-                try:
-                    # 尝试下载正文图片
-                    image_content, is_valid = _download_image(img_url)
-                    
-                    if is_valid:
-                        source_name = "Article Content Image"
-                    else:
-                        logger.warning(f"⚠️ 正文图片下载失败或无效")
+                # 🚀 短期优化：跳过 Pollinations 图片，因为 AI 生成太慢容易超时
+                if "pollinations" in img_url.lower():
+                    logger.info(f"⏭️ 跳过 Pollinations 图片 (生成太慢)，使用快速图库")
+                else:
+                    logger.info(f"🖼️ 发现正文图片，尝试作为封面: {img_url[:80]}...")
+                    try:
+                        # 尝试下载正文图片
+                        image_content, is_valid = _download_image(img_url)
                         
-                        # 🔄 Fallback: 如果是 Pollinations 匿名模式失败，立即尝试认证模式
-                        if "pollinations" in img_url.lower() and "key=" not in img_url:
-                            logger.info(f"🔄 [Fallback] Pollinations 匿名模式失败，尝试认证模式...")
-                            # 添加 API Key
-                            auth_url = img_url + ("&" if "?" in img_url else "?") + f"key={_get_random_pollinations_key()}"
-                            image_content, is_valid = _download_image(auth_url)
-                            if is_valid:
-                                source_name = "Pollinations (Auth Fallback)"
-                                logger.info(f"✅ Pollinations 认证模式成功")
-                        
-                except Exception as e:
-                    logger.warning(f"❌ 下载正文图片异常: {e}")
+                        if is_valid:
+                            source_name = "Article Content Image"
+                        else:
+                            logger.warning(f"⚠️ 正文图片下载失败或无效")
+                            
+                    except Exception as e:
+                        logger.warning(f"❌ 下载正文图片异常: {e}")
 
             try:
                 import tempfile
@@ -554,66 +548,50 @@ class WellCMSPublisher:
                     logger.info("未获取到正文图片，开始尝试 Fallback 图库...")
 
                 # ================================================================
-                # 🔄 Fallback 策略 (仅在正文无图或下载失败时执行)
+                # 🔄 Fallback 策略 (优化顺序：快速图库优先，Pollinations 最后)
+                # 优先级: Pexels → Pixabay → Unsplash → Pollinations
                 # ================================================================
                 
-                # 方案 1: Pollinations (如果正文里没图，可能用户希望 AI 生成一张?)
-                # 逻辑调整：原代码逻辑其实是"如果正文有图链接但下载失败"也会走这里吗？
-                # 原代码逻辑非常混杂。现在的逻辑是：
-                # 1. 正文有图 -> 用正文图
-                # 2. 正文无图 -> 走 Fallback (Pollinations -> Pexels -> Pixabay -> Unsplash)
+                keywords = article.get('keywords', 'packaging box')
                 
-                # 如果正文图片失败，image_content 依然是 None，继续往下走
-                
-                # 方案 1: Pollinations AI 生成 (基于关键词)
+                # 方案 1: Pexels (速度快，1-3秒)
                 if not image_content:
-                    # 注意：不仅仅是下载失败，如果正文根本没图，也应该走这里
-                    # 但为了生成相关图片，我们需要 prompt。使用关键词。
-                    prompt = article.get('keywords', 'packaging design')
-                    logger.info(f"[Fallback] 尝试 Pollinations 生成 (Prompt: {prompt})...")
-                    
-                    # 构造 Pollinations URL
-                    import urllib.parse
-                    encoded_prompt = urllib.parse.quote(prompt)
-                    poll_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
-                    
-                    # 模式1: 匿名模式
-                    image_content, is_valid = _download_image(poll_url)
-                    if is_valid:
-                        source_name = "Pollinations (Anonymous)"
-                    else:
-                        # 模式2: 认证模式
-                        logger.info("[Pollinations] 匿名模式失败，切换到认证模式...")
-                        auth_url = f"{poll_url}?key={_get_random_pollinations_key()}"
-                        image_content, is_valid = _download_image(auth_url)
-                        if is_valid:
-                            source_name = "Pollinations (Authenticated)"
-                        else:
-                             logger.warning("[Pollinations] 生成失败")
-
-                # 方案 2: Pexels Fallback
-                if not image_content:
-                    logger.info("[Fallback] 尝试 Pexels...")
-                    keywords = article.get('keywords', 'packaging box')
+                    logger.info("[Fallback 1] 尝试 Pexels (快速图库)...")
                     image_content, is_valid = _get_pexels_cover(keywords)
                     if is_valid:
                         source_name = "Pexels"
                 
-                # 方案 3: Pixabay Fallback
+                # 方案 2: Pixabay (速度快，1-3秒)
                 if not image_content:
-                    logger.info("[Fallback] 尝试 Pixabay...")
-                    keywords = article.get('keywords', 'packaging box')
+                    logger.info("[Fallback 2] 尝试 Pixabay (快速图库)...")
                     image_content, is_valid = _get_pixabay_cover(keywords)
                     if is_valid:
                         source_name = "Pixabay"
                 
-                # 方案 4: Unsplash Fallback
+                # 方案 3: Unsplash (CDN，较快)
                 if not image_content:
-                    logger.info("[Fallback] 尝试 Unsplash...")
+                    logger.info("[Fallback 3] 尝试 Unsplash...")
                     fallback_url = _get_unsplash_cover(article.get('keywords', ''))
                     image_content, is_valid = _download_image(fallback_url, timeout=15)
                     if is_valid:
                         source_name = "Unsplash"
+                
+                # 方案 4: Pollinations AI 生成 (最慢，作为最后备选)
+                if not image_content:
+                    import urllib.parse
+                    prompt = keywords
+                    logger.info(f"[Fallback 4] 最后尝试 Pollinations AI 生成 (Prompt: {prompt})...")
+                    
+                    encoded_prompt = urllib.parse.quote(prompt)
+                    poll_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=512&height=384"  # 降低分辨率加速
+                    
+                    # 只尝试认证模式（更稳定）
+                    auth_url = f"{poll_url}&key={_get_random_pollinations_key()}"
+                    image_content, is_valid = _download_image(auth_url)
+                    if is_valid:
+                        source_name = "Pollinations (Last Resort)"
+                    else:
+                        logger.warning("[Pollinations] 生成失败，文章将无封面发布")
                 
                 # 上传图片
                 if image_content:
