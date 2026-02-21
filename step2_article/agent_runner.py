@@ -129,8 +129,8 @@ def run():
                 print("   ⚠️ 未找到 record_id，创建了新记录")
         
         # Random Interval
-        # Optimization: 5-10s to avoid rate limit
-        wait_time = random.uniform(5, 10)
+        # Optimization: 3-5s interval (DeepSeek rate limit is generous)
+        wait_time = random.uniform(3, 5)
         print(f"   ⏳ 等待 {wait_time:.1f} 秒...")
         time.sleep(wait_time)
 

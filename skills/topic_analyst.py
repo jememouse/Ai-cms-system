@@ -19,7 +19,7 @@ class TopicAnalysisSkill(BaseSkill):
     def __init__(self):
         super().__init__(
             name="topic_analysis",
-            description="分析热点列表，挑选最有价值的 20 个，并生成 6 个 SEO 标题"
+            description="分析热点列表，挑选最有价值的 25 个，并为每个生成 4 个 SEO 标题"
         )
 
     def execute(self, input_data: Dict) -> List[Dict]:

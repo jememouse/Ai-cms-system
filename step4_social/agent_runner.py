@@ -23,7 +23,7 @@ def run():
     # 注意：为了支持多平台分发，我们需要足够的素材。
     # 这里我们获取最近 100 篇 Published 文章。
     print("🔍 [System] 正在加载素材库 (Published Articles)...")
-    source_records = client.fetch_records_by_status(status=config.STATUS_PUBLISHED, limit=100)
+    source_records = client.fetch_records_by_status(status=config.STATUS_PUBLISHED, limit=300)
     print(f"📚 素材库就绪: {len(source_records)} 篇")
     
     if not source_records:
