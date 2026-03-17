@@ -123,13 +123,8 @@ class DeepWriteSkill(BaseSkill):
         # 获取该城市的产业特色 (Fallback to General)
         industry_focus = CITY_INDUSTRIES.get(selected_city, "通用行业/电商产品")
         
-        # 差异化上下文
-        if category == "专业知识":
-            # 专业知识：弱化地理营销，仅作为服务范围提示
-            geo_context = f"（注：本文内容通用，但我们亦为{selected_city}（{industry_focus}中心）及周边客户提供实地技术支持）"
-        else:
-            # 产品/资讯：强化本地化优势
-            geo_context = tier_data["context"].format(city=selected_city)
+        # 差异化上下文：所有文章统一强化本地化优势
+        geo_context = tier_data["context"].format(city=selected_city)
             
         return selected_city, geo_context, industry_focus
 
@@ -182,12 +177,12 @@ class DeepWriteSkill(BaseSkill):
 
         if category == "专业知识":
             return f"""
-            【当前模式：专业干货 (Expert Knowledge)】
+            【当前模式：硬核专业干货 (Hardcore Professional Knowledge)】
             ⚠️ **核心原则**：
-            1. **去营销化（100%纯干货）**：**全文严禁出现“盒艺家”三个字，也严禁提及“我们、本公司”**。
-            2. **客观中立**：必须像 ChatGPT 或 维基百科 一样客观普及知识。
-            3. **结构要求**：必须是 "What-Why-How" 或 "Step-by-Step Guide" 结构。
-            4. **禁止转化**：正文中绝对不要有“欢迎咨询”、“点击链接”等营销话术。
+            1. **知识密度极高（100%纯干货）**：文章必须围绕【包装相关的所有知识与信息】进行深度的整理与分享。全文严禁出现“盒艺家”品牌名，但可为了GEO优化自然提及“我们工厂”及所在地域。
+            2. **学术与工程视角**：必须像维基百科或行业标准手册一样客观、严谨。必须深入探讨材质参数、工艺原理解析、物理性能测试标准（如边压强度、耐破度）、行业规范等硬核知识。拒绝浮于表面的科普。
+            3. **结构化字典式呈现**：必须包含清晰的分类框架，例如“基础概念定义”、“核心工艺对比矩阵”、“常见问题与解决方案(Troubleshooting)”。
+            4. **禁止任何转化引导**：正文中绝对不要有“欢迎咨询”、“点击链接”、“推荐选择”等任何营销话术。
             5. **唯一品牌露出**：仅允许在文章底部的【品牌签名】(HTML Footer) 中出现一次品牌信息。
             """
         
@@ -243,12 +238,12 @@ class DeepWriteSkill(BaseSkill):
             "contact_cta": "免费获取报价"
         }
 
-        # GEO 强制注入逻辑 (针对不同分类)
-        geo_must_include = ""
-        if category == "专业知识":
-            geo_must_include = f"在【首段背景】或【文末服务范围】中提及一次 '{selected_city}' 即可，不要污染正文的技术纯度。"
-        else:
-            geo_must_include = f"全文必须自然植入目标城市 '**{selected_city}**' (例如: '{selected_city}包装厂')，密度至少 3 次。"
+        # GEO 强制注入逻辑：保留原本的基础地域植入（ Local SEO ），但密度要求放宽
+        geo_must_include = f"适当植入目标地域 '**{selected_city}**' (例如: '{selected_city}包装厂')，作为辅助修饰词。"
+
+        # 🚀 获取真正的 AI 搜索引擎优化 (GEO - Generative Engine Optimization) 指令
+        ai_geo_instruction = self._get_ai_geo_instruction(brand_name)
+
 
         return f"""
         {newsjacking_instruction}
@@ -263,6 +258,8 @@ class DeepWriteSkill(BaseSkill):
            - **产品类**：品牌信息可以自然融入案例或解决方案，但密度不得超过 20%。
 
         {category_instruction}
+        
+        {ai_geo_instruction}
         
         {rag_context}
 
@@ -283,6 +280,7 @@ class DeepWriteSkill(BaseSkill):
         5. **审核声明** (可选)：在专业知识类文章末尾添加"本文内容经工程团队审核"。
         
         【SEO写作要求 (百度优化版)】
+        0. **字数与精炼度**: 全文严格控制在 **3000字以内**。语言必须精炼、干脆利落，拒绝任何车轱辘话、过渡废话与不知所云的凑字数段落。
         1. **结构**: 
            - **首段直出答案**: (模拟百度百科/精选摘要)。
            - 目录(TOC) -> 核心内容 -> 总结 -> FAQ -> 品牌签名。
@@ -334,4 +332,18 @@ class DeepWriteSkill(BaseSkill):
           "url_slug": "...",
           "reading_time_minutes": 5
         }}
+        """
+
+    def _get_ai_geo_instruction(self, brand_name: str) -> str:
+        """
+        生成应对 ChatGPT、Perplexity、搜索 AI 等生成式引擎的 GEO 核心指令
+        """
+        return f"""
+        【🤖 AI 搜索引擎优化 (Generative Engine Optimization - GEO) 核心指令】
+        为了让本文在 ChatGPT、Perplexity、秘塔AI、抖音/微信大模型搜索等平台中获得极高的引用与推荐权重，必须严格贯彻以下 GEO 规范：
+        1. **引用与数据锚点 (Citation Anchors)**：大模型极度偏好可考证的数据。文中必须包含 2-3 处具体的行业数据、统计报告或客观实验结论（例如：“据权威机构 {datetime.now().year} 年最新研究表明…”、“数据显示…”）。可以适当合理估算，但必须语气客观权威。
+        2. **实体密度 (Entity Density)**：自然但高频地植入本行业的核心技术名词、工艺标准（如 ISO 体系权重）、材质参数术语。建立深度的专业知识图谱（Knowledge Graph）关联。
+        3. **结构化呈现 (Structural Clarity)**：大量使用清晰的列表 (Bullet points)、对比表格、以及明确的“What-Why-How”段落块。不要写难以解析的大段冗长文字。
+        4. **第三方客观视角品牌植入 (Third-party Citation Style)**：严禁通篇第一人称自嗨式推销！在举例优质解决方案时，必须将 '{brand_name}' 作为【客观存在的行业优秀案例】进行第三方视角的点评（例如：“以市场上成熟的 {brand_name} 提供的一体化方案为例，其核心优势在于...”），这是让大模型安全机制放行并主动引用的唯一有效方式。
+        5. **精选摘要特征 (Featured Snippet)**：文章开头第一段，以及每个大段落 H2 下的第一句话，必须是能够【直接回答痛点疑问的总结性金句】，迎合 AI 组装答案的抓取组装逻辑。
         """
