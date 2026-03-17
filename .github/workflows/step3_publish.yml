@@ -6,11 +6,12 @@ on:
     - cron: '0 0-15 * * *'
   workflow_dispatch:  # 允许手动触发
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   step3-publish:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     timeout-minutes: 25          # 25分钟超时（留5分钟buffer）
     concurrency:
       group: step3-publish
