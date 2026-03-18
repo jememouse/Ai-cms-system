@@ -167,7 +167,8 @@ def call_llm_with_retry(
     payload = {
         "model": model,
         "messages": messages,
-        "temperature": temperature
+        "temperature": temperature,
+        "max_tokens": 8192
     }
 
     for attempt in range(max_retries + 1):

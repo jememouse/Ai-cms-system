@@ -151,9 +151,13 @@ class GoogleSheetClient:
                                 self._connect()
                             continue
                     
-                    # 不可重试或重试耗尽，抛出异常
+                    # 不可重试或重试耗尽，抛出异常或返回默认值避免崩溃
                     print(f"❌ Google API 调用失败 (已重试 {attempt} 次): {e}")
-                    raise e
+                    if "fetch" in func.__name__:
+                        return []
+                    elif "update" in func.__name__ or "create" in func.__name__:
+                        return False
+                    return None
             return None
         return wrapper
 
