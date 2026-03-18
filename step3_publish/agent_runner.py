@@ -72,10 +72,10 @@ def run():
     print("🔍 [System] 正在扫描待发布文章...")
     # 限制根据 Config
     # [Target Capacity Strategy]
-    # 方案A优化: 每1小时 13 篇 (16次/天 × 13 = 208篇/天, 控制在200以内)
-    # Total = 13 (Round-robin 分配给多个账号)
+    # 每1小时 20 篇 (16次/天 × 20 = 320篇/天)
+    # Total = 20 (Round-robin 分配给多个账号)
     
-    limit = 13
+    limit = 20
     
     # 还是打印一下账号信息只是为了调试
     num_accounts = len(active_accounts) if active_accounts else 1
